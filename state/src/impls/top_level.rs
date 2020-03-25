@@ -49,7 +49,7 @@ use coordinator::context::{Key as DbCxtKey, SubStorageAccess, Value as DbCxtValu
 use ctypes::errors::RuntimeError;
 use ctypes::transaction::{Action, ShardTransaction, StakeAction, Transaction};
 use ctypes::util::unexpected::Mismatch;
-use ctypes::{BlockNumber, CommonParams, ShardId, StorageId, TxHash};
+use ctypes::{BlockNumber, CommonParams, StorageId, TxHash};
 use kvdb::DBTransaction;
 use merkle_trie::{Result as TrieResult, TrieError, TrieFactory};
 use primitives::{Bytes, H256};
@@ -370,14 +370,14 @@ impl TopLevelState {
     fn apply_action<C: FindDoubleVoteHandler>(
         &mut self,
         action: &Action,
-        network_id: NetworkId,
+        _network_id: NetworkId,
         _tx_hash: TxHash,
-        signed_hash: &TxHash,
+        _signed_hash: &TxHash,
         sender_address: &Address,
         sender_public: &Public,
         client: &C,
-        parent_block_number: BlockNumber,
-        parent_block_timestamp: u64,
+        _parent_block_number: BlockNumber,
+        _parent_block_timestamp: u64,
         _current_block_timestamp: u64,
     ) -> StateResult<()> {
         match action {
@@ -431,12 +431,12 @@ impl TopLevelState {
 
     fn apply_shard_transaction_to_shard(
         &mut self,
-        transaction: &ShardTransaction,
-        shard_id: ShardId,
-        sender: &Address,
-        approvers: &[Address],
-        parent_block_number: BlockNumber,
-        parent_block_timestamp: u64,
+        _transaction: &ShardTransaction,
+        _shard_id: ShardId,
+        _sender: &Address,
+        _approvers: &[Address],
+        _parent_block_number: BlockNumber,
+        _parent_block_timestamp: u64,
     ) -> StateResult<()> {
         Ok(())
     }
@@ -503,11 +503,6 @@ impl TopLevelState {
     #[cfg(test)]
     fn set_balance(&mut self, a: &Address, balance: u64) -> TrieResult<()> {
         self.get_account_mut(a)?.set_balance(balance);
-        Ok(())
-    }
-    #[cfg(test)]
-    fn set_seq(&mut self, a: &Address, seq: u64) -> TrieResult<()> {
-        self.get_account_mut(a)?.set_seq(seq);
         Ok(())
     }
 }
@@ -619,13 +614,6 @@ impl TopState for TopLevelState {
         let mut metadata = self.get_metadata_mut()?;
         metadata.update_term_params();
         Ok(())
-    }
-}
-
-fn is_active_account(state: &dyn TopStateView, address: &Address) -> TrieResult<bool> {
-    match &state.account(address)? {
-        Some(account) if account.is_active() => Ok(true),
-        _ => Ok(false),
     }
 }
 
@@ -915,7 +903,7 @@ mod tests_state {
         let mut state = get_temp_state();
         let a = Address::default();
         state.get_account_mut(&a).unwrap();
-        assert_eq!(Ok(H256::from("2e594d2da19716006e514f67113ce75c3e9155d31e3a90e79592996fedd377d7")), state.commit());
+        assert_eq!(Ok(H256::from("6e218029d05b2ffc4094fb1f9b27a45f917075e9ef2a41878b66c9236735495b")), state.commit());
     }
 
     #[test]
