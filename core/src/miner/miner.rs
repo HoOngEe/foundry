@@ -65,7 +65,6 @@ pub struct MinerOptions {
     /// then `new_fee > old_fee + old_fee >> mem_pool_fee_bump_shift` should be satisfied to replace.
     /// Local transactions ignore this option.
     pub mem_pool_fee_bump_shift: usize,
-    pub allow_create_shard: bool,
 }
 
 impl Default for MinerOptions {
@@ -78,7 +77,6 @@ impl Default for MinerOptions {
             mem_pool_size: 8192,
             mem_pool_memory_limit: Some(2 * 1024 * 1024),
             mem_pool_fee_bump_shift: 3,
-            allow_create_shard: false,
         }
     }
 }
@@ -418,15 +416,7 @@ impl Miner {
         self.sealing_enabled.load(Ordering::Relaxed) && (Instant::now() > *self.next_allowed_reseal.lock())
     }
 
-    fn is_allowed_transaction(&self, action: &Action) -> bool {
-        if let Action::CreateShard {
-            ..
-        } = action
-        {
-            if !self.options.allow_create_shard {
-                return false
-            }
-        }
+    fn is_allowed_transaction(&self, _action: &Action) -> bool {
         true
     }
 }

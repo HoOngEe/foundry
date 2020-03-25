@@ -39,7 +39,6 @@ use ckey::{Address, NetworkId, PlatformAddress};
 use cstate::{DoubleVoteHandler, FindDoubleVoteHandler, StateDB, StateResult, TopLevelState, TopStateView};
 use ctimer::{TimeoutHandler, TimerApi, TimerScheduleError, TimerToken};
 use ctypes::header::Header;
-use ctypes::transaction::ShardTransaction;
 use ctypes::{BlockHash, BlockNumber, CommonParams, ShardId, TxHash};
 use kvdb::{DBTransaction, KeyValueDB};
 use parking_lot::{Mutex, RwLock, RwLockReadGuard};
@@ -294,15 +293,8 @@ impl DatabaseClient for Client {
 }
 
 impl ExecuteClient for Client {
-    fn execute_transaction(&self, transaction: &ShardTransaction, sender: &Address) -> StateResult<()> {
-        let mut state = Client::state_at(&self, BlockId::Latest).expect("Latest state MUST exist");
-        state.apply_shard_transaction(
-            transaction,
-            sender,
-            &[],
-            self.best_block_header().number(),
-            self.best_block_header().timestamp(),
-        )
+    fn execute_transaction(&self, _sender: &Address) -> StateResult<()> {
+        Ok(())
     }
 }
 

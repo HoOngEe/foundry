@@ -39,7 +39,6 @@ use cdb::DatabaseError;
 use ckey::{Address, NetworkId, PlatformAddress};
 use cstate::{FindDoubleVoteHandler, StateResult, TopLevelState, TopStateView};
 use ctypes::header::Header;
-use ctypes::transaction::ShardTransaction;
 use ctypes::{BlockHash, BlockNumber, CommonParams, ShardId, TxHash};
 use kvdb::KeyValueDB;
 use primitives::{Bytes, H256};
@@ -266,7 +265,7 @@ pub trait DatabaseClient {
 }
 
 pub trait ExecuteClient {
-    fn execute_transaction(&self, transaction: &ShardTransaction, sender: &Address) -> StateResult<()>;
+    fn execute_transaction(&self, sender: &Address) -> StateResult<()>;
 }
 
 pub trait StateInfo {
