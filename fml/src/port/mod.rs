@@ -47,7 +47,7 @@ impl<D: Dispatcher + 'static> Port<D> {
     }
 
     pub fn call(&self, data: Vec<u8>) -> Vec<u8> {
-        self.call(data)
+        self.server.call(data)
     }
 }
 

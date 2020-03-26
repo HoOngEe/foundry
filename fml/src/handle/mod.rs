@@ -23,13 +23,14 @@ pub type MethodId = u32;
 pub type TraitId = u32;
 pub type StructId = u32;
 
-struct ExportedHandle {
+pub struct ExportedHandle {
     trait_id: TraitId,
     struct_id: StructId,
 }
 
-struct ImportedHandle {
+pub struct ImportedHandle {
     trait_id: TraitId,
+    port_id: String, // TODO: improve this with an integer index.
 }
 
 /// This will be implemented per module

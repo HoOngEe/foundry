@@ -14,42 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use fml::handle::{ImportedHandle};
-use fml::port::Port;
-use super::super::handles::{Bank as TBank, PoliceStation as TPoliceStation};
-use super::super::Context;
+extern crate codechain_fml as fml;
 
-pub struct Bank {
+mod fmltest1;
 
-    handle: ImportedHandle
-}
 
-impl TBank for Bank {
-    fn deposit(&self, name: &str, amount: u64) -> u64 {
-    }
-
-    fn kill_the_clerk(&self, name: &str, weapon: &str) -> bool {
-
-    }
-
-    fn check_balance(&self, name: &str) -> u64 {
-
-    }
-
-    fn ask_nearest_police_station(&self) -> PoliceStation {
-
-    }
-}
-
-pub struct PoliceStation {
-    handle: ImportedHandle
-}
-
-impl TPoliceStation for PoliceStation {
-    fn turn_yourself_in(&self, bail: u64) -> String {
-
-    }
-    fn kill_the_police(&self) -> () {
-
-    }
-}

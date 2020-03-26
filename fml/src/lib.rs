@@ -16,13 +16,12 @@
 
 extern crate codechain_basesandbox as cbsb;
 
-mod context;
-mod core;
-mod handle;
-mod port;
+pub mod context;
+pub mod core;
+pub mod handle;
+pub mod port;
 mod queue;
 
 type IpcBase = cbsb::ipc::domain_socket::DomainSocket;
 
 pub use crate::core::core;
-pub use context::GlobalContext;

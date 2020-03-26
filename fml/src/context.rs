@@ -14,16 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-/// A global context that will be accessible from callback / calls.
-pub struct GlobalContext {
-    /// Meta, pre-decided constant variables
-    pub config: GlobalContextConfig,
+use crate::port::Port;
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use crate::handle::Dispatcher;
 
-    /// Custom variables
-    pub custom: GlobalContextCustom,
-}
-
-pub struct GlobalContextConfig {
+pub struct Config {
     /// kind of this module. Per-binary
     pub kind: String,
     /// id of this instance of module. Per-instance, Per-appdescriptor
@@ -37,4 +33,28 @@ pub struct GlobalContextConfig {
 /// You can add additional variable as you want.
 /// However, be careful of doing so, since it will be hihgly likely to cause a nondeterministic behavior.
 /// Try to keep stateless as possible, and custmoize this only for the cache purpose.
-pub struct GlobalContextCustom {}
+pub trait Custom {
+    fn new(context: &Config) -> Self;
+}
+
+/// A global context that will be accessible from this module
+pub struct Context<T : Custom, D: Dispatcher> {
+    /// Internal objects
+    ports: Arc<Mutex<HashMap<String, Port<D>>>>,
+
+    /// Meta, pre-decided constant variables
+    pub config: Config,
+
+    /// Custom variables
+    pub custom: T,
+}
+
+impl<T : Custom, D: Dispatcher> Context<T, D> {
+    pub fn new(ports: Arc<Mutex<HashMap<String, Port<D>>>>, config: Config, custom: T) -> Self {
+        Context {
+            ports,
+            config,
+            custom
+        }
+    }
+}

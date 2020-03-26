@@ -14,44 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-extern crate codechain_fml as fml;
+pub use super::generated::*;
 
-trait Bank {
+/*
+HOW TO DEFINE HANDLES
+
+1. import::* must appear only in the return type of a method in the imported handle
+2. export::* must appear only in the return type of a method in the exported handle.
+3. Both import::* and export::* may appear in a complex type
+as far as it's on the right spot (the return type).
+For example, the return type is allowed to be Vec<(u8, import::SomeHandle)>
+4. You must always use &self for both imported / exported handles. (&mut self it not possible)
+If you want mutablity to internal state of Handle or Global context, you should consider Mutex.
+
+*/
+
+pub trait Bank {
     fn deposit(&self, name: &str, amount: u64) -> u64;
     fn kill_the_clerk(&self, name: &str, weapon: &str) -> bool;
     fn check_balance(&self, name: &str) -> u64;
     fn ask_nearest_police_station(&self) -> import::PoliceStation;
 }
 
-trait PoliceStation {
+pub trait PoliceStation {
     fn turn_yourself_in(&self, bail: u64) -> String;
     fn kill_the_police(&self) -> ();
 }
 
-trait Customer {
-    fn add_criminal_record(&self, name: &str, record: &str);
+pub trait Customer {
+    fn add_criminal_record(&mut self, name: &str, record: &str);
     fn reform(&self, name: &str) -> bool;
-}
-
-struct TrivialCustomer {
-    ctx: GlobalContext,
-    psychopath: bool
-}
-
-impl Customer for TrivialCustomer {
-    fn add_criminal_record(&self, name: &str, record: &str) {
-
-    }
-
-    fn reform(&self, name: &str) -> bool {
-        if self.psychopath {
-            return false
-        }
-        //ctx.custom.
-        true
-    }
-}
-
-pub fn main_like() {
-    fml::core();
+    fn provoke(&self, name: &str) -> export::Customer;
 }

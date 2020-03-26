@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::context::{GlobalContext, GlobalContextConfig, GlobalContextCustom};
+use crate::context::{Config, Context, Custom};
 use crate::port::Port;
 use crate::IpcBase;
 use crate::handle::Dispatcher;
@@ -22,12 +22,7 @@ use cbsb::execution::executee;
 use cbsb::ipc::domain_socket::DomainSocket;
 use cbsb::ipc::{InterProcessUnit, IpcRecv, IpcSend};
 use std::collections::HashMap;
-use std::sync::Arc;
-
-fn initialize(context: &GlobalContextConfig) -> GlobalContextCustom {
-    // Do whatever you want in the initializing phase.
-    GlobalContextCustom {}
-}
+use std::sync::{Arc, Mutex};
 
 pub fn recv<T: serde::de::DeserializeOwned>(ctx: &executee::Context<IpcBase>) -> T {
     serde_cbor::from_slice(&ctx.ipc.as_ref().unwrap().recv(None).unwrap()).unwrap()
@@ -49,7 +44,7 @@ fn create_port<D: Dispatcher + 'static>(name: &str, ipc_type: Vec<u8>, ipc_confi
     }
 }
 
-pub fn core<D: Dispatcher + 'static>(dispatcher: D) {
+pub fn core<C: Custom, D: Dispatcher + 'static>(dispatcher: D) {
     let ctx = executee::start::<crate::IpcBase>();
 
     // FIXME: Does rust guarantee left-to-right evaluation order in the struct initialization?
@@ -57,17 +52,15 @@ pub fn core<D: Dispatcher + 'static>(dispatcher: D) {
     let id: String = recv(&ctx);
     let key: String = recv(&ctx);
     let args: Vec<u8> = recv(&ctx);
-    let config = GlobalContextConfig {
+    let config = Config {
         kind,
         id,
         key,
         args,
     };
-    let custom = initialize(&config);
-    let global_context = GlobalContext {
-        config,
-        custom,
-    };
+    let custom = C::new(&config);
+    let ports: Arc<Mutex<HashMap<String, Port<D>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let global_context = Context::new(ports.clone(), config, custom);
 
     let mut ports: HashMap<String, Port<D>> = HashMap::new();
     let dispather = Arc::new(dispatcher);

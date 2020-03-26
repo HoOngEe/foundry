@@ -14,16 +14,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{HandleInstanceId, MethodId};
+use crate::fml::handle::{HandleInstanceId, MethodId};
+use crate::fml::handle::Dispatcher;
+use super::export::ExportedHandles;
 
-impl super::export::ExportedHandles {
-    pub fn dispatch_and_call(&self, handle: HandleInstanceId, method: MethodId, data: &[u8]) -> Vec<u8> {
+impl Dispatcher for ExportedHandles {
+    fn dispatch_and_call(&self, handle: HandleInstanceId, method: MethodId, data: &[u8]) -> Vec<u8> {
         let handle_type = (handle << 16) >> 16;
         let handle_index = handle >> 16;
 
         match handle_type {
             1 => self.handles_trait1.get(handle_index as usize).dispatch(method, data),
-            2 => self.handles_trait2.get(handle_index as usize).dispatch(method, data),
             _ => panic!(),
         }
     }

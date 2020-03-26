@@ -14,28 +14,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::pool::HandlePool;
-use super::Dispatch;
+use fml::handle::pool::HandlePool;
+use fml::handle::Dispatch;
+use fml::handle::{ExportedHandle};
+use super::super::handles::{Customer as TCustomer};
 
-pub trait Trait1: Dispatch + Send + Sync {
-    fn hi(&self, a: i32) -> f32;
+pub struct Customer {
+    handle: ExportedHandle
 }
 
-pub trait Trait2: Dispatch + Send + Sync {
-    fn bye(&self, a: i32, b: String) -> f32;
+trait TTCustomer: Dispatch + Send + Sync {
+    fn add_criminal_record(&mut self, name: &str, record: &str);
+    fn reform(&self, name: &str) -> bool;
+    fn provoke(&self, name: &str) -> Customer;
 }
 
 //macro will automatically generate this
 pub struct ExportedHandles {
-    pub handles_trait1: HandlePool<dyn Trait1>,
-    pub handles_trait2: HandlePool<dyn Trait2>,
+    pub handles_trait1: HandlePool<dyn TCustomer>,
 }
 
 impl ExportedHandles {
     pub fn new(size: usize) -> Self {
         ExportedHandles {
             handles_trait1: HandlePool::new(size),
-            handles_trait2: HandlePool::new(size),
         }
     }
 }
