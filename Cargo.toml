@@ -32,6 +32,7 @@ ctimer = { package = "codechain-timer", path = "util/timer" }
 cmodule = { package = "codechain-module", path = "module" }
 ctrlc = { git = "https://github.com/paritytech/rust-ctrlc.git" }
 crossbeam-channel = "0.3"
+cbasesandbox = {package = "codechain-basesandbox", path = "basesandbox"}
 fdlimit = "0.1"
 finally-block = "0.1"
 futures = "0.1"
@@ -76,5 +77,8 @@ members = [
     "types",
     "module",
     "module-macros",
-    "coordinator"
+    "coordinator",
+    "basesandbox",
+    "testmodule",
+    "fml"
 ]

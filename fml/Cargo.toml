@@ -1,0 +1,15 @@
+[package]
+name = "codechain-fml"
+version = "0.1.0"
+authors = ["CodeChain Team <hi@codechain.io>"]
+edition = "2018"
+
+[dependencies]
+crossbeam = "0.7.3"
+codechain-basesandbox = { path = "../basesandbox" }
+fml-macro = { path = "./macro" }
+rand = "0.6.1"
+serde = "1.0"
+serde_json = "1.0"
+serde_cbor = "0.11.1"
+serde_derive = "1.0"

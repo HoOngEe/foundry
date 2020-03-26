@@ -1,0 +1,17 @@
+[package]
+name = "codechain-basesandbox"
+version = "0.1.0"
+authors = ["CodeChain Team <hi@codechain.io>"]
+edition = "2018"
+
+[dependencies]
+primitives = { git = "https://github.com/CodeChain-io/rust-codechain-primitives.git", version = "0.4" }
+ccrypto = { package = "codechain-crypto", git = "https://github.com/CodeChain-io/rust-codechain-crypto.git", version = "0.2" }
+crossbeam-channel = "0.4.0"
+codechain-module = { path = "../module" }
+nix = "0.17.0"
+hex = "0.4.2"
+serde = "1.0"
+serde_json = "1.0"
+serde_cbor = "0.11.1"
+serde_derive = "1.0"
