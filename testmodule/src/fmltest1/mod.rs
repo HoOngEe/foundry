@@ -14,15 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod office;
-mod person;
-
+pub mod office;
+pub mod person;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn fmltest1_simple() {
-    }
+    fn fmltest1_simple() {}
 }

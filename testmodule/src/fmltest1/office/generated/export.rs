@@ -27,20 +27,40 @@ pub fn get_handle_pool(port_id: PortId) -> Arc<ExportedHandles> {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Customer {
+pub struct Bank {
+    handle: ExportedHandle,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PoliceStation {
     handle: ExportedHandle,
 }
 
 pub struct ExportedHandles {
     pub port_id: PortId,
-    pub handles_trait1: HandlePool<dyn handles::Customer + Send + Sync>,
+    pub handles_trait1: HandlePool<dyn handles::Bank + Send + Sync>,
+    pub handles_trait2: HandlePool<dyn handles::PoliceStation + Send + Sync>,
 }
 
 impl ExportedHandles {
-    pub fn create_handle_customer<T: handles::Customer + Send + Sync + 'static>(&self, x: T) -> Customer {
+    pub fn create_handle_bank<T: handles::Bank + Send + Sync + 'static>(&self, x: T) -> Bank {
         let trait_id = 1 as u16;
         let index = self.handles_trait1.create(Arc::new(x)) as u16;
-        Customer {
+        Bank {
+            handle: ExportedHandle {
+                port_id: self.port_id,
+                id: HandleInstanceId {
+                    trait_id,
+                    index,
+                },
+            },
+        }
+    }
+
+    pub fn create_handle_police_station<T: handles::PoliceStation + Send + Sync + 'static>(&self, x: T) -> PoliceStation {
+        let trait_id = 2 as u16;
+        let index = self.handles_trait2.create(Arc::new(x)) as u16;
+        PoliceStation {
             handle: ExportedHandle {
                 port_id: self.port_id,
                 id: HandleInstanceId {

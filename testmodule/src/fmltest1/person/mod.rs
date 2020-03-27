@@ -16,74 +16,21 @@
 
 mod generated;
 pub mod handles;
+mod impls;
+pub mod context;
+pub mod descriptor;
 
 pub use generated::*;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use context::Context as MyContext;
 
-pub type Context = Arc<fml::context::Context<MyContext, export::ExportedHandles>>;
-
-struct MyContext {
-    customers: HashMap<String, (u64, Vec<String>)>,
-    bank: Option<import::Bank>,
+pub type Context = fml::context::Context<MyContext, export::ExportedHandles>;
+lazy_static! {
+    static ref CONTEXT: Option<fml::context::Context<MyContext, export::ExportedHandles>> = { None };
 }
-
-impl fml::context::Custom for MyContext {
-    fn new(_context: &fml::context::Config) -> Self {
-        MyContext {
-            customers: HashMap::new(),
-            bank: None
-        }
-    }
-}
-
-struct JustCustomer {
-    ctx: Context,
-}
-
-impl handles::Customer for JustCustomer {
-    fn add_criminal_record(&mut self, name: &str, record: &str) {
-        self.ctx.custom.customers.get_mut(name).unwrap().1.push(record.to_string());
-    }
-
-    fn reform(&self, name: &str) -> bool {
-        true
-    }
-
-    fn provoke(&self, name: &str) -> export::Customer {
-
-    }
-}
-
-struct DangerousCustomer {
-    ctx: Context,
-    psychopath: bool
-}
-
-impl handles::Customer for DangerousCustomer {
-    fn add_criminal_record(&mut self, name: &str, record: &str) {
-        self.ctx.custom.customers.get_mut(name).unwrap().1.push(record.to_string());
-    }
-
-    fn reform(&self, name: &str) -> bool {
-        if self.psychopath {
-            // Reforming a psychopath is of course impossible, and even will trigger him to kill someone!
-            self.ctx.custom.bank.as_ref().unwrap().ask_nearest_police_station().kill_the_police();
-            return false
-        }
-        if self.ctx.custom.customers.get(name).unwrap().0 == 0 {
-            // He is so poort that he just refuses the be reformed.
-            return false
-        }
-        true
-    }
-
-    fn provoke(&self, name: &str) -> export::Customer {
-
-    }
+pub fn get_context() -> &'static Context {
+    return CONTEXT.as_ref().unwrap()
 }
 
 pub fn main_like() {
-    let handles = export::ExportedHandles::new(128);
-    fml::core::<MyContext, export::ExportedHandles>(handles);
+    fml::core::<MyContext, export::ExportedHandles>();
 }

@@ -32,7 +32,7 @@ pub trait Bank {
     fn deposit(&self, name: String, amount: u64) -> u64;
     fn kill_the_clerk(&self, name: String, weapon: String) -> bool;
     fn check_balance(&self, name: String) -> u64;
-    fn ask_nearest_police_station(&self) -> import::PoliceStation;
+    fn ask_nearest_police_station(&self) -> export::PoliceStation;
 }
 
 pub trait PoliceStation {
@@ -43,5 +43,5 @@ pub trait PoliceStation {
 pub trait Customer {
     fn add_criminal_record(&self, name: String, record: String);
     fn reform(&self, name: String) -> bool;
-    fn provoke(&self, name: String) -> export::Customer;
+    fn provoke(&self, name: String) -> import::Customer;
 }

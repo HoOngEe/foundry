@@ -14,23 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod generated;
-pub mod handles;
-mod impls;
-pub mod context;
-pub mod descriptor;
-
-pub use generated::*;
-use context::Context as MyContext;
-
-pub type Context = fml::context::Context<MyContext, export::ExportedHandles>;
-lazy_static! {
-    static ref CONTEXT: Option<fml::context::Context<MyContext, export::ExportedHandles>> = { None };
-}
-pub fn get_context() -> &'static Context {
-    return CONTEXT.as_ref().unwrap()
+use std::sync::Mutex;
+pub use super::generated::*;
+pub struct Context {
+    pub customer: Option<import::Customer>,
 }
 
-pub fn main_like() {
-    fml::core::<MyContext, export::ExportedHandles>();
+impl fml::context::Custom for Context {
+    fn new(_context: &fml::context::Config) -> Self {
+        Context {
+            customer: None,
+        }
+    }
 }

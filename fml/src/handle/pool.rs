@@ -18,8 +18,9 @@ use crate::queue::Queue;
 use std::sync::{Arc, Mutex};
 
 const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(10);
+pub const NOT_DECIDED_INDEX: u16 = std::u16::MAX;
 
-// Per-trait pool
+// Per-trait, Per-port pool
 pub struct HandlePool<T: ?Sized> {
     handles: Arc<Mutex<Vec<Option<Arc<T>>>>>,
     token: Arc<Queue<usize>>,

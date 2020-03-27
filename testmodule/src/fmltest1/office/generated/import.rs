@@ -14,16 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::super::handles::{Bank as TBank, PoliceStation as TPoliceStation};
+use super::super::handles::{Customer as TCustomer};
 use super::super::{get_context};
 use fml::handle::{ImportedHandle, MethodId};
 use fml::PacketHeader;
 
-pub struct Bank {
-    handle: ImportedHandle,
-}
-
-pub struct PoliceStation {
+pub struct Customer {
     handle: ImportedHandle,
 }
 
@@ -35,33 +31,19 @@ fn call<T: serde::Serialize, R: serde::de::DeserializeOwned>(handle: &ImportedHa
     serde_cbor::from_reader(&result[std::mem::size_of::<PacketHeader>()..]).unwrap()
 }
 
-impl TBank for Bank {
-    fn deposit(&self, name: String, amount: u64) -> u64 {
-        call(&self.handle, 1, &(name, amount))
+impl TCustomer for Customer {
+    fn add_criminal_record(&self, name: String, record: String) {
+        call(&self.handle, 1, &(name, record))
     }
 
-    fn kill_the_clerk(&self, name: String, weapon: String) -> bool {
-        call(&self.handle, 2, &(name, weapon))
+    fn reform(&self, name: String) -> bool {
+        call(&self.handle, 1, &(name,))
     }
 
-    fn check_balance(&self, name: String) -> u64 {
-        call(&self.handle, 3, &(name,))
-    }
-
-    fn ask_nearest_police_station(&self) -> PoliceStation {
-        let handle: ImportedHandle = call(&self.handle, 3, &());
-        PoliceStation {
+    fn provoke(&self, name: String) -> Customer {
+        let handle: ImportedHandle = call(&self.handle, 3, &(name,));
+        Customer {
             handle,
         }
-    }
-}
-
-impl TPoliceStation for PoliceStation {
-    fn turn_yourself_in(&self, bail: u64) -> String {
-        call(&self.handle, 1, &(bail,))
-    }
-
-    fn kill_the_police(&self) -> () {
-        call(&self.handle, 2, &())
     }
 }

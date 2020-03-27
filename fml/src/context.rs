@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::port::Port;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 use crate::handle::Dispatcher;
+use crate::port::Port;
+use crate::port::PortId;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 pub struct Config {
     /// kind of this module. Per-binary
@@ -38,9 +39,9 @@ pub trait Custom {
 }
 
 /// A global context that will be accessible from this module
-pub struct Context<T : Custom, D: Dispatcher> {
+pub struct Context<T: Custom, D: Dispatcher> {
     /// Internal objects
-    ports: Arc<Mutex<HashMap<String, Port<D>>>>,
+    pub ports: Arc<Mutex<HashMap<PortId, Port<D>>>>,
 
     /// Meta, pre-decided constant variables
     pub config: Config,
@@ -49,12 +50,12 @@ pub struct Context<T : Custom, D: Dispatcher> {
     pub custom: T,
 }
 
-impl<T : Custom, D: Dispatcher> Context<T, D> {
-    pub fn new(ports: Arc<Mutex<HashMap<String, Port<D>>>>, config: Config, custom: T) -> Self {
+impl<T: Custom, D: Dispatcher> Context<T, D> {
+    pub fn new(ports: Arc<Mutex<HashMap<PortId, Port<D>>>>, config: Config, custom: T) -> Self {
         Context {
             ports,
             config,
-            custom
+            custom,
         }
     }
 }

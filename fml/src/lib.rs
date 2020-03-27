@@ -25,3 +25,4 @@ mod queue;
 type IpcBase = cbsb::ipc::domain_socket::DomainSocket;
 
 pub use crate::core::core;
+pub use crate::port::server::PacketHeader;

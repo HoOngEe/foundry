@@ -15,7 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 extern crate codechain_fml as fml;
+#[macro_use]
+extern crate lazy_static;
+extern crate serde_cbor;
 
 mod fmltest1;
-
-

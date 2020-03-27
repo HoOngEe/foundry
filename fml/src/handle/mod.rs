@@ -16,29 +16,39 @@
 
 pub mod pool;
 
-/// 16 less significant bits: trait of the handle & 16 more significant bits: index in a pool
-pub type HandleInstanceId = u32;
+use super::port::PortId;
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct HandleInstanceId {
+    pub trait_id: u16,
+    pub index: u16,
+}
+
 pub type MethodId = u32;
 
 pub type TraitId = u32;
 pub type StructId = u32;
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ExportedHandle {
-    trait_id: TraitId,
-    struct_id: StructId,
+    pub id: HandleInstanceId,
+    pub port_id: PortId,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ImportedHandle {
-    trait_id: TraitId,
-    port_id: String, // TODO: improve this with an integer index.
+    pub id: HandleInstanceId,
+    pub port_id: PortId,
 }
 
-/// This will be implemented per module
-pub trait Dispatcher : Send + Sync {
-    fn dispatch_and_call(&self, handle: HandleInstanceId, method: MethodId, data: &[u8]) -> Vec<u8>;
+/// This will be implemented per module, but instantiated per link.
+pub trait Dispatcher: Send + Sync {
+    fn new(port_id: PortId, size: usize) -> Self;
+    fn dispatch_and_call(&self, buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]);
 }
 
-/// This will be implemented per trait
+/// This will be implemented per trait (of Handle)
 pub trait Dispatch {
     fn dispatch(&self, method_id: MethodId, data: &[u8]) -> Vec<u8>;
 }

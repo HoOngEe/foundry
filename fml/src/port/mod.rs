@@ -14,27 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-mod server;
+pub mod server;
 
-use crate::handle::{HandleInstanceId, MethodId, Dispatcher};
+use crate::handle::{Dispatcher, HandleInstanceId, MethodId};
 use cbsb::ipc::{IpcRecv, IpcSend};
 use std::sync::{Arc, Mutex};
 
-pub struct Port<D: Dispatcher>  {
+pub type PortId = usize;
+
+pub struct Port<D: Dispatcher> {
     dispatcher: Arc<D>,
     server: server::Server,
 }
 
 impl<D: Dispatcher + 'static> Port<D> {
-    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(name: &str, send: S, recv: R, dispatcher: Arc<D>) -> Self {
+    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(
+        port_id: PortId,
+        send: S,
+        recv: R,
+        dispatcher: Arc<D>,
+    ) -> Self {
         let dispatcher_clone = dispatcher.clone();
         let server = server::Server::new(
+            port_id,
             server::ServerInternal::new(
                 128,
                 128,
                 128,
-                Arc::new(move |handle: HandleInstanceId, method: MethodId, data: &[u8]| {
-                    dispatcher_clone.dispatch_and_call(handle, method, data)
+                Arc::new(move |buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]| {
+                    dispatcher_clone.dispatch_and_call(buffer, handle, method, data)
                 }),
             ),
             send,
@@ -46,8 +54,12 @@ impl<D: Dispatcher + 'static> Port<D> {
         }
     }
 
-    pub fn call(&self, data: Vec<u8>) -> Vec<u8> {
-        self.server.call(data)
+    pub fn call(&self, handle: HandleInstanceId, method: MethodId, data: Vec<u8>) -> Vec<u8> {
+        self.server.call(handle, method, data)
+    }
+
+    pub fn dispatcher_get(&self) -> Arc<D> {
+        self.dispatcher.clone()
     }
 }
 

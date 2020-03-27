@@ -15,9 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use crate::context::{Config, Context, Custom};
-use crate::port::Port;
-use crate::IpcBase;
 use crate::handle::Dispatcher;
+use crate::port::Port;
+use crate::port::PortId;
+use crate::IpcBase;
 use cbsb::execution::executee;
 use cbsb::ipc::domain_socket::DomainSocket;
 use cbsb::ipc::{InterProcessUnit, IpcRecv, IpcSend};
@@ -32,19 +33,24 @@ pub fn send<T: serde::Serialize>(ctx: &executee::Context<IpcBase>, data: &T) {
     ctx.ipc.as_ref().unwrap().send(&serde_cbor::to_vec(data).unwrap());
 }
 
-fn create_port<D: Dispatcher + 'static>(name: &str, ipc_type: Vec<u8>, ipc_config: Vec<u8>, dispatcher: Arc<D>) -> Port<D> {
+fn create_port<D: Dispatcher + 'static>(
+    port_id: PortId,
+    ipc_type: Vec<u8>,
+    ipc_config: Vec<u8>,
+    dispatcher: Arc<D>,
+) -> Port<D> {
     let ipc_type: String = serde_cbor::from_slice(&ipc_type).unwrap();
 
     if ipc_type == "DomainSocket" {
         let ipc = DomainSocket::new(ipc_config);
         let ipc_send = ipc.create_sender();
-        Port::new(name, ipc_send, ipc, dispatcher)
+        Port::new(port_id, ipc_send, ipc, dispatcher)
     } else {
         panic!("Invalid port creation request");
     }
 }
 
-pub fn core<C: Custom, D: Dispatcher + 'static>(dispatcher: D) {
+pub fn core<C: Custom, D: Dispatcher + 'static>() {
     let ctx = executee::start::<crate::IpcBase>();
 
     // FIXME: Does rust guarantee left-to-right evaluation order in the struct initialization?
@@ -59,26 +65,25 @@ pub fn core<C: Custom, D: Dispatcher + 'static>(dispatcher: D) {
         args,
     };
     let custom = C::new(&config);
-    let ports: Arc<Mutex<HashMap<String, Port<D>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let ports: Arc<Mutex<HashMap<PortId, Port<D>>>> = Arc::new(Mutex::new(HashMap::new()));
     let global_context = Context::new(ports.clone(), config, custom);
 
-    let mut ports: HashMap<String, Port<D>> = HashMap::new();
-    let dispather = Arc::new(dispatcher);
+    let mut ports: HashMap<PortId, Port<D>> = HashMap::new();
 
     loop {
         let message: String = recv(&ctx);
         if message == "connect" {
-            let name: String = recv(&ctx);
+            let port_id = recv(&ctx);
             let arg1 = recv(&ctx);
             let arg2 = recv(&ctx);
-            ports.insert(name.clone(), create_port(&name, arg1, arg2, dispather.clone()));
+            let dispather = Arc::new(D::new(port_id, 128));
+            ports.insert(port_id, create_port(port_id, arg1, arg2, dispather));
         } else if message == "disconnect" {
-            let name: String = recv(&ctx);
-            ports.remove(&name).unwrap();
+            let port_id = recv(&ctx);
+            ports.remove(&port_id).unwrap();
         } else if message == "terminate" {
             break
         } else if message == "handle" {
-
         } else {
             panic!("Unexpected message")
         }
