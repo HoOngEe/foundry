@@ -23,9 +23,7 @@ pub struct Context<T: Ipc> {
     pub ipc: Option<T>,
 }
 
-pub fn start<T: Ipc>() -> Context<T> {
-    let args: Vec<String> = std::env::args().collect();
-
+pub fn start<T: Ipc>(args: Vec<String>) -> Context<T> {
     let ipc = T::new(hex::decode(args[1].clone()).unwrap());
     ipc.send(b"#INIT\0");
     Context {

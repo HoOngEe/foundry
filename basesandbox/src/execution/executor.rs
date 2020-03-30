@@ -14,29 +14,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::ipc::domain_socket::DomainSocket;
 use crate::ipc::*;
+use std::collections::HashMap;
 use std::process::Command;
+use std::sync::Mutex;
 use std::time::Duration;
 
-const TEMPORARY_PATH: &str = "./tmp/";
+pub trait Executor {
+    fn new(path: &str, args: &[&str]) -> Self;
+    fn join(&mut self);
+}
 
-struct Executor {
+pub struct Executable {
     child: std::process::Child,
 }
 
-impl Executor {
+impl Executor for Executable {
     fn new(path: &str, args: &[&str]) -> Self {
         let mut command = Command::new(path);
         command.args(args);
-        Executor {
+        Executable {
             child: command.spawn().unwrap(),
         }
     }
-}
 
-impl Drop for Executor {
-    fn drop(&mut self) {
+    fn join(&mut self) {
         // This is synchronized with excutee's signal (#TERMINATE),
         // which is supposed to be sent in termination step.
         // Thus, in normal case, it won't take much time to be in a waitable status.
@@ -52,54 +54,77 @@ impl Drop for Executor {
     }
 }
 
-struct DirectoryReserver {
-    path: String,
+lazy_static! {
+    static ref POOL: Mutex<HashMap<String, Box<dyn Fn(Vec<String>) -> () + Send + Sync>>> =
+        { Mutex::new(HashMap::new()) };
 }
 
-impl DirectoryReserver {
-    fn new(path: String) -> Self {
-        std::fs::create_dir(&path).unwrap();
-        DirectoryReserver {
-            path,
+pub fn add_plain_thread_pool(key: String, f: Box<dyn Fn(Vec<String>) -> () + Send + Sync>) {
+    POOL.lock().unwrap().insert(key, f);
+}
+
+pub struct PlainThread {
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Executor for PlainThread {
+    fn new(path: &str, args: &[&str]) -> Self {
+        let path = path.to_owned();
+        let args: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+        let handle = std::thread::spawn(move || POOL.lock().unwrap().get(&path).unwrap()(args));
+
+        PlainThread {
+            handle: Some(handle),
         }
+    }
+
+    fn join(&mut self) {
+        // PlainThread Executor is for test, so no worry for malicous unresponsiveness
+        self.handle.take().unwrap().join().unwrap();
     }
 }
 
-impl Drop for DirectoryReserver {
+/// Rust doesn't allow Drop for trait, so we need this
+/// See E0120
+struct ExecutorWrapper<T: Executor> {
+    executor: T,
+}
+
+impl<T: Executor> Drop for ExecutorWrapper<T> {
     fn drop(&mut self) {
-        std::fs::remove_dir(&self.path).unwrap();
+        self.executor.join();
     }
 }
 
 /// declaration order of fields is important because of Drop dependencies
-pub struct Context<T: Ipc> {
+pub struct Context<T: TwoWayInitializableIpc, E: Executor> {
     pub ipc: T,
-    _child: Executor,
-    _directory: DirectoryReserver,
+    _child: ExecutorWrapper<E>,
+    _linker: T::Linker,
 }
 
 /// id must be unique for each instance.
-pub fn execute<T: Ipc + TwoWayInitialize>(path: &str) -> Result<Context<T>, String> {
-    std::fs::remove_dir_all("./tmp").ok(); // we don't care whether it succeeds
-    let directory = DirectoryReserver::new("./tmp".to_owned());
-    let (ipc_config, ipc_config_next) = T::create(init_data_from_path(TEMPORARY_PATH.to_owned()));
-    let ipc = T::new(ipc_config);
-    let ipc_config_next = hex::encode(&ipc_config_next);
-    let args: Vec<&str> = vec![&ipc_config_next];
-    let child = Executor::new(path, &args);
+pub fn execute<T: TwoWayInitializableIpc, E: Executor>(path: &str) -> Result<Context<T, E>, String> {
+    let linker = T::Linker::new("BaseSandbox".to_owned());
+    let (config_server, config_client) = linker.create();
+    let ipc = T::new(config_server);
+    let config_client = hex::encode(&config_client);
+    let args: Vec<&str> = vec![&config_client];
+    let child = ExecutorWrapper {
+        executor: Executor::new(path, &args),
+    };
     let ping = ipc.recv(Some(Duration::from_millis(100))).unwrap();
     assert_eq!(ping, b"#INIT\0");
-
     Ok(Context {
         ipc,
         _child: child,
-        _directory: directory,
+        _linker: linker,
     })
 }
 
 /// Call this when you're sure that the excutee is ready to teminate; i.e.
 /// it will call excutee::terminate() asap.
-pub fn terminate<T: Ipc>(ctx: Context<T>) {
+pub fn terminate<T: TwoWayInitializableIpc, E: Executor>(ctx: Context<T, E>) {
     let ping = ctx.ipc.recv(Some(Duration::from_millis(50))).unwrap();
     assert_eq!(ping, b"#TERMINATE\0");
 }

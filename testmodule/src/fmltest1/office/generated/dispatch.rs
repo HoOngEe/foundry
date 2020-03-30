@@ -52,8 +52,8 @@ fn dispatch_1(buffer: &mut [u8], object: Arc<dyn handles::Bank + Send + Sync>, m
 fn dispatch_2(buffer: &mut [u8], object: Arc<dyn handles::PoliceStation + Send + Sync>, method: MethodId, data: &[u8]) {
     match method {
         1 => {
-            let (a1, ) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
-            let result = object.turn_yourself_in(a1, );
+            let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
+            let result = object.turn_yourself_in(a1);
             serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
         }
         2 => {

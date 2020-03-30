@@ -21,8 +21,8 @@ use fml::handle::{ExportedHandle, HandleInstanceId};
 use fml::port::PortId;
 use std::collections::HashMap;
 
-struct JustCustomer {
-    port_id: PortId,
+pub struct JustCustomer {
+    pub port_id: PortId,
 }
 
 impl Customer for JustCustomer {
@@ -43,9 +43,9 @@ impl Customer for JustCustomer {
     }
 }
 
-struct DangerousCustomer {
-    port_id: PortId,
-    psychopath: bool,
+pub struct DangerousCustomer {
+    pub port_id: PortId,
+    pub psychopath: bool,
 }
 
 impl Customer for DangerousCustomer {
@@ -56,11 +56,11 @@ impl Customer for DangerousCustomer {
     fn reform(&self, name: String) -> bool {
         if self.psychopath {
             // Reforming a psychopath is of course impossible, and even will trigger him to kill someone!
-            get_context().custom.bank.as_ref().unwrap().ask_nearest_police_station().kill_the_police();
+            get_context().custom.bank.lock().unwrap().as_ref().unwrap().ask_nearest_police_station().kill_the_police();
             return false
         }
         if get_context().custom.customers.lock().unwrap().get(&name).unwrap().0 == 0 {
-            // He is so poort that he just refuses the be reformed.
+            // He is so poor that he just refuses the be reformed.
             return false
         }
         true

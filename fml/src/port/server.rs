@@ -258,7 +258,7 @@ impl Server {
             raw: server2,
             main_thread: Some(main_thread),
             sender_thread: Some(sender_thread),
-            termiantor: Some(terminator),
+            termiantor: Some(Box::new(terminator)),
             port_id,
         }
     }

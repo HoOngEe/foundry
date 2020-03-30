@@ -14,6 +14,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// DELETE THIS
+extern crate ctestmodule;
+extern crate fml;
+
 #[macro_use]
 extern crate log;
 #[macro_use]

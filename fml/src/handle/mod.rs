@@ -52,3 +52,9 @@ pub trait Dispatcher: Send + Sync {
 pub trait Dispatch {
     fn dispatch(&self, method_id: MethodId, data: &[u8]) -> Vec<u8>;
 }
+
+// Default, preset handler provider
+pub trait HandlePreset {
+    fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String>;
+    fn import(&mut self, handle: ImportedHandle) -> Result<(), String>;
+}

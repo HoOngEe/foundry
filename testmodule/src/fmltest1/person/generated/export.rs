@@ -23,12 +23,12 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub fn get_handle_pool(port_id: PortId) -> Arc<ExportedHandles> {
-    get_context().ports.lock().unwrap().get(&port_id).unwrap().dispatcher_get()
+    get_context().ports.lock().unwrap().get(&port_id).unwrap().1.dispatcher_get()
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Customer {
-    handle: ExportedHandle,
+    pub handle: ExportedHandle,
 }
 
 pub struct ExportedHandles {

@@ -23,17 +23,17 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub fn get_handle_pool(port_id: PortId) -> Arc<ExportedHandles> {
-    get_context().ports.lock().unwrap().get(&port_id).unwrap().dispatcher_get()
+    get_context().ports.lock().unwrap().get(&port_id).unwrap().1.dispatcher_get()
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Bank {
-    handle: ExportedHandle,
+    pub handle: ExportedHandle,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PoliceStation {
-    handle: ExportedHandle,
+    pub handle: ExportedHandle,
 }
 
 pub struct ExportedHandles {
@@ -57,7 +57,10 @@ impl ExportedHandles {
         }
     }
 
-    pub fn create_handle_police_station<T: handles::PoliceStation + Send + Sync + 'static>(&self, x: T) -> PoliceStation {
+    pub fn create_handle_police_station<T: handles::PoliceStation + Send + Sync + 'static>(
+        &self,
+        x: T,
+    ) -> PoliceStation {
         let trait_id = 2 as u16;
         let index = self.handles_trait2.create(Arc::new(x)) as u16;
         PoliceStation {

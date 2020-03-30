@@ -15,69 +15,103 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use std::collections::hash_map::HashMap;
+use std::cell::RefCell;
 use std::os::unix::net::UnixDatagram;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-pub struct DomainSocket {
-    address_src: String,
-    address_dst: String,
-    socket: Arc<UnixDatagram>,
-    buffer: Mutex<Vec<u8>>,
+const TEMPORARY_PATH: &str = "./tmp";
+
+struct DirectoryReserver {
+    path: String,
 }
 
-impl Drop for DomainSocket {
+impl DirectoryReserver {
+    fn new(path: String) -> Self {
+        std::fs::create_dir(&path).unwrap();
+        DirectoryReserver {
+            path,
+        }
+    }
+}
+
+impl Drop for DirectoryReserver {
     fn drop(&mut self) {
-        self.socket.shutdown(std::net::Shutdown::Both).unwrap();
-        std::fs::remove_file(&self.address_src).unwrap();
+        std::fs::remove_dir(&self.path).unwrap();
     }
 }
 
-impl InterProcessUnit for DomainSocket {
-    fn new(data: Vec<u8>) -> Self {
-        let (address_src, address_dst) = serde_cbor::from_slice(&data).unwrap();
-        let socket = UnixDatagram::bind(&address_src).unwrap();
-        DomainSocket {
-            address_src,
-            address_dst,
-            socket: Arc::new(socket),
-            buffer: Mutex::new(vec![0; 1024]),
+pub struct DomainSocketLinker {
+    address_server: String,
+    address_client: String,
+    _directory: DirectoryReserver,
+}
+
+impl TwoWayInitialize for DomainSocketLinker {
+    type Server = DomainSocket;
+    type Client = DomainSocket;
+
+    fn new(_name: String) -> Self {
+        std::fs::remove_dir_all(TEMPORARY_PATH).ok(); // we don't care whether it succeeds
+        let directory = DirectoryReserver::new(TEMPORARY_PATH.to_owned());
+
+        let address_server = format!("{}/{}", TEMPORARY_PATH, generate_random_name());
+        let address_client = format!("{}/{}", TEMPORARY_PATH, generate_random_name());
+        DomainSocketLinker {
+            address_server,
+            address_client,
+            _directory: directory,
         }
     }
 
-    fn ready(&mut self) {}
-}
-
-impl DomainSocket {
-    pub fn create_sender(&self) -> DomainSocketSendOnly {
-        DomainSocketSendOnly {
-            address_dst: self.address_dst.clone(),
-            socket: self.socket.clone(),
-        }
+    fn create(&self) -> (Vec<u8>, Vec<u8>) {
+        (
+            serde_cbor::to_vec(&(&self.address_server, &self.address_client)).unwrap(),
+            serde_cbor::to_vec(&(&self.address_client, &self.address_server)).unwrap(),
+        )
     }
 }
 
-impl IpcSend for DomainSocket {
-    fn send(&self, data: &[u8]) {
-        assert_eq!(self.socket.send_to(data, &self.address_dst).unwrap(), data.len());
+impl Drop for DomainSocketLinker {
+    fn drop(&mut self) {
+        std::fs::remove_file(&self.address_server).unwrap();
+        std::fs::remove_file(&self.address_client).unwrap();
     }
 }
 
-pub struct Terminator(Arc<UnixDatagram>);
-
-impl Terminate for Terminator {
-    fn terminate(&self) {
+struct SocketInternal(UnixDatagram);
+impl Drop for SocketInternal {
+    fn drop(&mut self) {
         self.0.shutdown(std::net::Shutdown::Both).unwrap();
     }
 }
 
-impl IpcRecv for DomainSocket {
+pub struct DomainSocketSend {
+    address_src: String,
+    address_dst: String,
+    socket: Arc<SocketInternal>,
+}
+
+impl IpcSend for DomainSocketSend {
+    fn send(&self, data: &[u8]) {
+        assert_eq!(self.socket.0.send_to(data, &self.address_dst).unwrap(), data.len());
+    }
+}
+
+pub struct DomainSocketRecv {
+    address_src: String,
+    address_dst: String,
+    socket: Arc<SocketInternal>,
+    buffer: RefCell<Vec<u8>>,
+}
+
+impl IpcRecv for DomainSocketRecv {
+    type MyTerminate = Terminator;
+
     fn recv(&self, timeout: Option<std::time::Duration>) -> Result<Vec<u8>, RecvFlag> {
-        let mut buffer = self.buffer.lock().unwrap();
-        self.socket.set_read_timeout(timeout).unwrap();
-        let (count, address) = self.socket.recv_from(&mut buffer).unwrap();
-        assert!(count <= buffer.len(), "Unix datagram got data larger than the buffer.");
+        self.socket.0.set_read_timeout(timeout).unwrap();
+        let (count, address) = self.socket.0.recv_from(&mut self.buffer.borrow_mut()).unwrap();
+        assert!(count <= self.buffer.borrow().len(), "Unix datagram got data larger than the buffer.");
         if count == 0 {
             return Err(RecvFlag::Termination)
         }
@@ -86,39 +120,75 @@ impl IpcRecv for DomainSocket {
             Path::new(&self.address_dst),
             "Unix datagram received packet from an unexpected sender."
         );
-        Ok(buffer[0..count].to_vec())
+        Ok(self.buffer.borrow()[0..count].to_vec())
     }
 
-    fn create_terminate(&self) -> Box<dyn Terminate> {
-        Box::new(Terminator(self.socket.clone()))
+    fn create_terminate(&self) -> Self::MyTerminate {
+        Terminator(self.socket.clone())
     }
 }
 
-// Having multiple senders is quite natural for channel-like model.
-pub struct DomainSocketSendOnly {
-    address_dst: String,
-    socket: Arc<UnixDatagram>,
+pub struct Terminator(Arc<SocketInternal>);
+
+impl Terminate for Terminator {
+    fn terminate(&self) {
+        (self.0).0.shutdown(std::net::Shutdown::Both).unwrap();
+    }
 }
 
-impl IpcSend for DomainSocketSendOnly {
+pub struct DomainSocket {
+    send: DomainSocketSend,
+    recv: DomainSocketRecv,
+}
+
+impl InterProcessUnit for DomainSocket {
+    fn new(data: Vec<u8>) -> Self {
+        let (address_src, address_dst): (String, String) = serde_cbor::from_slice(&data).unwrap();
+        let socket = Arc::new(SocketInternal(UnixDatagram::bind(&address_src).unwrap()));
+        DomainSocket {
+            send: DomainSocketSend {
+                address_src: address_src.clone(),
+                address_dst: address_dst.clone(),
+                socket: socket.clone(),
+            },
+            recv: DomainSocketRecv {
+                address_src,
+                address_dst,
+                socket,
+                buffer: RefCell::new(vec![0; 1024]),
+            },
+        }
+    }
+    fn ready(&mut self) {}
+}
+
+impl IpcSend for DomainSocket {
     fn send(&self, data: &[u8]) {
-        assert_eq!(self.socket.send_to(data, &self.address_dst).unwrap(), data.len());
+        self.send.send(data)
     }
 }
 
-impl Ipc for DomainSocket {}
+impl IpcRecv for DomainSocket {
+    type MyTerminate = Terminator;
 
-impl TwoWayInitialize for DomainSocket {
-    fn create(config: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
-        let config: HashMap<String, String> = serde_cbor::from_slice(&config).unwrap();
-        let path = config.get("path").unwrap();
-
-        let address_server = format!("{}{}", path, generate_random_name());
-        let address_client = format!("{}{}", path, generate_random_name());
-
-        (
-            serde_cbor::to_vec(&(address_server.clone(), address_client.clone())).unwrap(),
-            serde_cbor::to_vec(&(address_client, address_server)).unwrap(),
-        )
+    fn recv(&self, timeout: Option<std::time::Duration>) -> Result<Vec<u8>, RecvFlag> {
+        self.recv.recv(timeout)
     }
+
+    fn create_terminate(&self) -> Self::MyTerminate {
+        self.recv.create_terminate()
+    }
+}
+
+impl Ipc for DomainSocket {
+    type SendOnly = DomainSocketSend;
+    type RecvOnly = DomainSocketRecv;
+
+    fn split(self) -> (Self::SendOnly, Self::RecvOnly) {
+        (self.send, self.recv)
+    }
+}
+
+impl TwoWayInitializableIpc for DomainSocket {
+    type Linker = DomainSocketLinker;
 }

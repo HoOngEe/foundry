@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod domain_socket;
+pub mod same_process;
 pub mod semaphore;
 use std::collections::hash_map::HashMap;
 
@@ -26,6 +27,18 @@ pub trait InterProcessUnit {
     fn ready(&mut self);
 }
 
+/// One possible abstraction for a server-client style of `Linker`
+pub trait TwoWayInitialize {
+    type Server: InterProcessUnit;
+    type Client: InterProcessUnit;
+
+    fn new(name: String) -> Self;
+    /// Generated two configurations
+    /// which will be feeded to InterProcessUnit::new(),
+    /// for both two ends in two different processes.
+    fn create(&self) -> (Vec<u8>, Vec<u8>);
+}
+
 /// Some implementors of InterProcessUnit would take a single 'path'
 /// since it's quite a trivial model that inter-process objects try to acquire an access to a
 /// inter-process handle that is identified by a system-wide name.
@@ -35,7 +48,15 @@ pub fn init_data_from_path(path: String) -> Vec<u8> {
     serde_cbor::to_vec(&config).unwrap()
 }
 
-/// Abstraction of IPC communication
+/// Most of IPC depends on a system-wide name, which looks quite vulnerable for
+/// possible attack. Rather, generating a random name would be more secure.
+pub fn generate_random_name() -> String {
+    let pid = std::process::id();
+    let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap();
+    let hash = ccrypto::blake256(format!("{:?}{}", time, pid));
+    format!("{:?}", hash)[0..16].to_string()
+}
+
 pub trait IpcSend: Send {
     /// It might block until counterparty's recv(). Even if not, the order is still guaranteed.
     fn send(&self, data: &[u8]);
@@ -53,28 +74,21 @@ pub trait Terminate: Send {
 }
 
 pub trait IpcRecv: Send {
+    type MyTerminate: Terminate;
+
     /// Returns Err only for the timeout or termination wake-up(otherwise panic)
     fn recv(&self, timeout: Option<std::time::Duration>) -> Result<Vec<u8>, RecvFlag>;
     /// Create a terminate switch that can be sent to another thread
-    fn create_terminate(&self) -> Box<dyn Terminate>;
+    fn create_terminate(&self) -> Self::MyTerminate;
 }
 
 pub trait Ipc: InterProcessUnit + IpcSend + IpcRecv {
-    // Some implementor of Ipc might provide split(), which consumes itself and return pair of IpcSend and IpcRecv
+    type SendOnly: IpcSend;
+    type RecvOnly: IpcRecv;
+    // split itself into Send-only and Recv-only. This is helpful for a threading
+    fn split(self) -> (Self::SendOnly, Self::RecvOnly);
 }
 
-/// Most of IPC depends on a system-wide-name, which looks quite vulnerable for
-/// possible attack. Rather, generating a random name would be more secure.
-pub fn generate_random_name() -> String {
-    let pid = std::process::id();
-    let time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap();
-    let hash = ccrypto::blake256(format!("{:?}{}", time, pid));
-    format!("{:?}", hash)[0..16].to_string()
-}
-
-pub trait TwoWayInitialize: InterProcessUnit {
-    /// From an opaque configuration, creates two configurations,
-    /// which will be feeded to InterProcessUnit::new(),
-    /// for the server(caller) itself and the following client (another prcoess).
-    fn create(config: Vec<u8>) -> (Vec<u8>, Vec<u8>);
+pub trait TwoWayInitializableIpc: Ipc {
+    type Linker: TwoWayInitialize;
 }

@@ -14,23 +14,44 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+pub mod context;
+pub mod descriptor;
 mod generated;
 pub mod handles;
 mod impls;
-pub mod context;
-pub mod descriptor;
+pub mod preset;
 
-pub use generated::*;
+use cbsb::ipc::domain_socket::DomainSocket;
+use cbsb::ipc::same_process::SameProcess;
 use context::Context as MyContext;
+pub use generated::*;
+use preset::Preset;
 
 pub type Context = fml::context::Context<MyContext, export::ExportedHandles>;
-lazy_static! {
-    static ref CONTEXT: Option<fml::context::Context<MyContext, export::ExportedHandles>> = { None };
-}
+static mut CONTEXT: Option<Context> = None;
+
 pub fn get_context() -> &'static Context {
-    return CONTEXT.as_ref().unwrap()
+    unsafe { CONTEXT.as_ref().unwrap() }
 }
 
-pub fn main_like() {
-    fml::core::<MyContext, export::ExportedHandles>();
+pub fn main_like(args: Vec<String>) {
+    let mut preset = Preset {};
+    fml::core::<DomainSocket, MyContext, export::ExportedHandles, Preset>(
+        args,
+        &mut preset,
+        Box::new(|ctx: Context| unsafe {
+            (&mut CONTEXT).replace(ctx);
+        }),
+    );
+}
+
+pub fn main_like_test(args: Vec<String>) {
+    let mut preset = Preset {};
+    fml::core::<SameProcess, MyContext, export::ExportedHandles, Preset>(
+        args,
+        &mut preset,
+        Box::new(|ctx: Context| unsafe {
+            CONTEXT.replace(ctx);
+        }),
+    );
 }

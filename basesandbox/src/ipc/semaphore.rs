@@ -32,6 +32,7 @@ pub struct Semaphore {
     name: String,
 }
 
+/*
 fn create(name: &str, mode: Mode) -> *mut libc::sem_t {
     unsafe {
         if Mode::CREATE == mode {
@@ -99,6 +100,7 @@ impl Drop for Semaphore {
 }
 
 impl TwoWayInitialize for Semaphore {
+
     fn create(config: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
         let config: HashMap<String, String> = serde_cbor::from_slice(&config).unwrap();
         let path = config.get("path").unwrap();
@@ -107,3 +109,4 @@ impl TwoWayInitialize for Semaphore {
         (serde_cbor::to_vec(&(address.clone(), 1)).unwrap(), serde_cbor::to_vec(&(address, 2)).unwrap())
     }
 }
+*/

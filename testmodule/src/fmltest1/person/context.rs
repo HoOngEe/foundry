@@ -14,19 +14,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+pub use super::generated::*;
 use std::collections::HashMap;
 use std::sync::Mutex;
-pub use super::generated::*;
 pub struct Context {
     pub customers: Mutex<HashMap<String, (u64, Vec<String>)>>,
-    pub bank: Option<import::Bank>,
+    pub bank: Mutex<Option<import::Bank>>,
 }
 
 impl fml::context::Custom for Context {
     fn new(_context: &fml::context::Config) -> Self {
         Context {
             customers: Mutex::new(HashMap::new()),
-            bank: None,
+            bank: Mutex::new(None),
         }
     }
 }

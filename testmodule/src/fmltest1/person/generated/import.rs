@@ -14,24 +14,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+use super::super::get_context;
 use super::super::handles::{Bank as TBank, PoliceStation as TPoliceStation};
-use super::super::{get_context};
 use fml::handle::{ImportedHandle, MethodId};
 use fml::PacketHeader;
 
 pub struct Bank {
-    handle: ImportedHandle,
+    pub handle: ImportedHandle,
 }
 
 pub struct PoliceStation {
-    handle: ImportedHandle,
+    pub handle: ImportedHandle,
 }
 
 fn call<T: serde::Serialize, R: serde::de::DeserializeOwned>(handle: &ImportedHandle, method: MethodId, args: &T) -> R {
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(std::mem::size_of::<PacketHeader>(), 0 as u8);
     serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &args).unwrap();
-    let result = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().call(handle.id, method, buffer);
+    let result = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().1.call(handle.id, method, buffer);
     serde_cbor::from_reader(&result[std::mem::size_of::<PacketHeader>()..]).unwrap()
 }
 
