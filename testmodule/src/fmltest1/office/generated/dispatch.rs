@@ -23,43 +23,53 @@ use fml::handle::pool::HandlePool;
 use fml::PacketHeader;
 use std::sync::Arc;
 
-fn dispatch_1(buffer: &mut [u8], object: Arc<dyn handles::Bank + Send + Sync>, method: MethodId, data: &[u8]) {
+fn dispatch_1(
+    mut buffer: std::io::Cursor<&mut Vec<u8>>,
+    object: Arc<dyn handles::Bank + Send + Sync>,
+    method: MethodId,
+    data: &[u8],
+) {
     match method {
         1 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.deposit(a1, a2);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.kill_the_clerk(a1, a2);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         3 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.check_balance(a1);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         4 => {
             let () = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.ask_nearest_police_station();
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }
 }
 
-fn dispatch_2(buffer: &mut [u8], object: Arc<dyn handles::PoliceStation + Send + Sync>, method: MethodId, data: &[u8]) {
+fn dispatch_2(
+    mut buffer: std::io::Cursor<&mut Vec<u8>>,
+    object: Arc<dyn handles::PoliceStation + Send + Sync>,
+    method: MethodId,
+    data: &[u8],
+) {
     match method {
         1 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.turn_yourself_in(a1);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let () = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.kill_the_police();
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }
@@ -74,7 +84,13 @@ impl Dispatcher for ExportedHandles {
         }
     }
 
-    fn dispatch_and_call(&self, buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]) {
+    fn dispatch_and_call(
+        &self,
+        buffer: std::io::Cursor<&mut Vec<u8>>,
+        handle: HandleInstanceId,
+        method: MethodId,
+        data: &[u8],
+    ) {
         match handle.trait_id {
             1 => dispatch_1(buffer, self.handles_trait1.get(handle.index as usize), method, data),
             2 => dispatch_2(buffer, self.handles_trait2.get(handle.index as usize), method, data),

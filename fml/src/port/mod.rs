@@ -38,12 +38,17 @@ impl<D: Dispatcher + 'static> Port<D> {
         let server = server::Server::new(
             port_id,
             server::ServerInternal::new(
-                128,
-                128,
-                128,
-                Arc::new(move |buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]| {
-                    dispatcher_clone.dispatch_and_call(buffer, handle, method, data)
-                }),
+                8,
+                8,
+                8,
+                Arc::new(
+                    move |buffer: std::io::Cursor<&mut Vec<u8>>,
+                          handle: HandleInstanceId,
+                          method: MethodId,
+                          data: &[u8]| {
+                        dispatcher_clone.dispatch_and_call(buffer, handle, method, data)
+                    },
+                ),
             ),
             send,
             recv,

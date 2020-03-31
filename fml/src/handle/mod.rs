@@ -19,7 +19,7 @@ pub mod pool;
 use super::port::PortId;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+#[derive(PartialEq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct HandleInstanceId {
     pub trait_id: u16,
     pub index: u16,
@@ -30,13 +30,13 @@ pub type MethodId = u32;
 pub type TraitId = u32;
 pub type StructId = u32;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ExportedHandle {
     pub id: HandleInstanceId,
     pub port_id: PortId,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct ImportedHandle {
     pub id: HandleInstanceId,
     pub port_id: PortId,
@@ -45,7 +45,13 @@ pub struct ImportedHandle {
 /// This will be implemented per module, but instantiated per link.
 pub trait Dispatcher: Send + Sync {
     fn new(port_id: PortId, size: usize) -> Self;
-    fn dispatch_and_call(&self, buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]);
+    fn dispatch_and_call(
+        &self,
+        buffer: std::io::Cursor<&mut Vec<u8>>,
+        handle: HandleInstanceId,
+        method: MethodId,
+        data: &[u8],
+    );
 }
 
 /// This will be implemented per trait (of Handle)

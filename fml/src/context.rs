@@ -40,10 +40,12 @@ pub trait Custom {
     fn new(context: &Config) -> Self;
 }
 
+pub type PortTable<D: Dispatcher> = HashMap<PortId, (Config, Port<D>)>;
+
 /// A global context that will be accessible from this module
 pub struct Context<T: Custom, D: Dispatcher> {
     /// PortId to (Counterparty's Module Configuration, Actual Port)
-    pub ports: Arc<Mutex<HashMap<PortId, (Config, Port<D>)>>>,
+    pub ports: Arc<Mutex<PortTable<D>>>,
 
     /// Meta, pre-decided constant variables
     pub config: Config,

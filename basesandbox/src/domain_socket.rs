@@ -15,15 +15,36 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::*;
-use crate::directory::TEMPORARY_PATH;
 use std::cell::RefCell;
 use std::os::unix::net::UnixDatagram;
 use std::path::Path;
 use std::sync::Arc;
 
+const TEMPORARY_PATH: &str = "./tmp";
+
+struct DirectoryReserver {
+    path: String,
+}
+
+impl DirectoryReserver {
+    fn new(path: String) -> Self {
+        std::fs::create_dir(&path).unwrap();
+        DirectoryReserver {
+            path,
+        }
+    }
+}
+
+impl Drop for DirectoryReserver {
+    fn drop(&mut self) {
+        std::fs::remove_dir(&self.path).unwrap();
+    }
+}
+
 pub struct DomainSocketLinker {
     address_server: String,
     address_client: String,
+    _directory: DirectoryReserver,
 }
 
 impl TwoWayInitialize for DomainSocketLinker {
@@ -31,11 +52,15 @@ impl TwoWayInitialize for DomainSocketLinker {
     type Client = DomainSocket;
 
     fn new(_name: String) -> Self {
+        std::fs::remove_dir_all(TEMPORARY_PATH).ok(); // we don't care whether it succeeds
+        let directory = DirectoryReserver::new(TEMPORARY_PATH.to_owned());
+
         let address_server = format!("{}/{}", TEMPORARY_PATH, generate_random_name());
         let address_client = format!("{}/{}", TEMPORARY_PATH, generate_random_name());
         DomainSocketLinker {
             address_server,
             address_client,
+            _directory: directory,
         }
     }
 

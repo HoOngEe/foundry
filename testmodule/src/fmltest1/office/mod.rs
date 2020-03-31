@@ -40,7 +40,7 @@ pub fn main_like(args: Vec<String>) {
         args,
         &mut preset,
         Box::new(|ctx: Context| unsafe {
-            (&mut CONTEXT).replace(ctx);
+            CONTEXT.replace(ctx);
         }),
     );
 }

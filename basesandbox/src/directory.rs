@@ -14,25 +14,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::ipc::*;
+pub const TEMPORARY_PATH: &str = "./tmp";
 
-// Interface for the sandboxee written in Rust
-pub struct Context<T: Ipc> {
-    /// ipc will be given with Some, but module may take it
-    /// However, the ipc must be return back here before the module terminates
-    pub ipc: Option<T>,
+pub struct DirectoryReserver {
+    path: String,
 }
 
-pub fn start<T: Ipc>(args: Vec<String>) -> Context<T> {
-    let ipc = T::new(hex::decode(args[1].clone()).unwrap());
-    ipc.send(b"#INIT\0");
-    Context {
-        ipc: Some(ipc),
+impl DirectoryReserver {
+    pub fn new(path: String) -> Self {
+        std::fs::remove_dir_all(TEMPORARY_PATH).ok(); // we don't care whether it succeeds
+        std::fs::create_dir(&path).unwrap();
+        DirectoryReserver {
+            path,
+        }
     }
 }
 
-impl<T: Ipc> Context<T> {
-    pub fn terminate(self) {
-        self.ipc.unwrap().send(b"#TERMINATE\0");
+impl Drop for DirectoryReserver {
+    fn drop(&mut self) {
+        std::fs::remove_dir(&self.path).unwrap();
     }
 }

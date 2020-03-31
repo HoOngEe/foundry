@@ -17,7 +17,7 @@
 use crate::ipc::*;
 use std::collections::HashMap;
 use std::process::Command;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 pub trait Executor {
@@ -55,11 +55,11 @@ impl Executor for Executable {
 }
 
 lazy_static! {
-    static ref POOL: Mutex<HashMap<String, Box<dyn Fn(Vec<String>) -> () + Send + Sync>>> =
+    static ref POOL: Mutex<HashMap<String, Arc<dyn Fn(Vec<String>) -> () + Send + Sync>>> =
         { Mutex::new(HashMap::new()) };
 }
 
-pub fn add_plain_thread_pool(key: String, f: Box<dyn Fn(Vec<String>) -> () + Send + Sync>) {
+pub fn add_plain_thread_pool(key: String, f: Arc<dyn Fn(Vec<String>) -> () + Send + Sync>) {
     POOL.lock().unwrap().insert(key, f);
 }
 
@@ -70,8 +70,12 @@ pub struct PlainThread {
 impl Executor for PlainThread {
     fn new(path: &str, args: &[&str]) -> Self {
         let path = path.to_owned();
-        let args: Vec<String> = args.iter().map(|x| x.to_string()).collect();
-        let handle = std::thread::spawn(move || POOL.lock().unwrap().get(&path).unwrap()(args));
+        let mut args: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+        args.insert(0, "Thread".to_owned()); // corresponding to program path
+        let handle = std::thread::spawn(move || {
+            let f = POOL.lock().unwrap().get(&path).unwrap().clone();
+            f(args)
+        });
 
         PlainThread {
             handle: Some(handle),
@@ -113,7 +117,7 @@ pub fn execute<T: TwoWayInitializableIpc, E: Executor>(path: &str) -> Result<Con
     let child = ExecutorWrapper {
         executor: Executor::new(path, &args),
     };
-    let ping = ipc.recv(Some(Duration::from_millis(100))).unwrap();
+    let ping = ipc.recv(Some(Duration::from_millis(200))).unwrap();
     assert_eq!(ping, b"#INIT\0");
     Ok(Context {
         ipc,
@@ -122,9 +126,11 @@ pub fn execute<T: TwoWayInitializableIpc, E: Executor>(path: &str) -> Result<Con
     })
 }
 
-/// Call this when you're sure that the excutee is ready to teminate; i.e.
-/// it will call excutee::terminate() asap.
-pub fn terminate<T: TwoWayInitializableIpc, E: Executor>(ctx: Context<T, E>) {
-    let ping = ctx.ipc.recv(Some(Duration::from_millis(50))).unwrap();
-    assert_eq!(ping, b"#TERMINATE\0");
+impl<T: TwoWayInitializableIpc, E: Executor> Context<T, E> {
+    /// Call this when you're sure that the excutee is ready to teminate; i.e.
+    /// it will call excutee::terminate() asap.
+    pub fn terminate(self) {
+        let ping = self.ipc.recv(Some(Duration::from_millis(200))).unwrap();
+        assert_eq!(ping, b"#TERMINATE\0");
+    }
 }

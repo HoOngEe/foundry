@@ -31,7 +31,7 @@ impl Bank for JustBank {
     }
 
     fn kill_the_clerk(&self, name: String, weapon: String) -> bool {
-        println!("{} killed the clerk, using {}!", name, weapon);
+        println!("{} killed the clerk, using a {}!", name, weapon);
         if weapon == "Gun" {
             true
         } else if weapon == "Knife" {

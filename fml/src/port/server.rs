@@ -20,15 +20,16 @@ use crate::handle::{HandleInstanceId, MethodId};
 use crate::queue::Queue;
 use cbsb::ipc::{IpcRecv, IpcSend, RecvFlag, Terminate};
 use crossbeam::channel::{bounded, Receiver, Sender};
+use std::io::Cursor;
 use std::sync::Arc;
 use std::thread;
 
 type SlotId = u32;
 type HandlerId = u32;
-type Dispatcher = dyn Fn(&mut [u8], HandleInstanceId, MethodId, &[u8]) + Send + Sync;
+type Dispatcher = dyn Fn(Cursor<&mut Vec<u8>>, HandleInstanceId, MethodId, &[u8]) + Send + Sync;
 
 const SLOT_CALL_OR_RETURN_INDICATOR: u32 = 1024 * 1024;
-const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(10);
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100000);
 
 // In A's view...
 // A calls another module:
@@ -40,6 +41,7 @@ const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(10);
 // Another module called A, and A responds:
 // => A is still a Service, and makes a response of an inbound call.
 
+#[derive(PartialEq, Debug)]
 pub struct PacketHeader {
     pub slot: SlotId,
     pub handle: HandleInstanceId,
@@ -48,14 +50,35 @@ pub struct PacketHeader {
 
 impl PacketHeader {
     pub fn new(buffer: &[u8]) -> Self {
-        unsafe { std::ptr::read_unaligned(buffer.as_ptr() as *const _) }
+        unsafe { std::ptr::read(buffer.as_ptr() as *const PacketHeader) }
     }
 
     pub fn write(&self, buffer: &mut [u8]) {
         unsafe {
-            std::ptr::write_unaligned(buffer.as_ptr() as *mut _, self);
+            std::ptr::copy_nonoverlapping(
+                self,
+                buffer.as_mut_ptr() as *mut PacketHeader,
+                std::mem::size_of::<PacketHeader>(),
+            );
         }
     }
+}
+
+#[test]
+fn encoding_packet_header() {
+    println!("{}", std::mem::size_of::<PacketHeader>());
+    let ph1 = PacketHeader {
+        slot: 0x1234,
+        handle: HandleInstanceId {
+            trait_id: 0x9999,
+            index: 0x8888,
+        },
+        method: 0x5678,
+    };
+    let mut buffer = vec![0 as u8; std::mem::size_of::<PacketHeader>()];
+    ph1.write(&mut buffer);
+    let ph2 = PacketHeader::new(&buffer);
+    assert_eq!(ph2, ph1);
 }
 
 fn ipc_sender<S: IpcSend>(queue_end: Receiver<Vec<u8>>, send: S) {
@@ -65,7 +88,7 @@ fn ipc_sender<S: IpcSend>(queue_end: Receiver<Vec<u8>>, send: S) {
             break
         }
         if data.len() < std::mem::size_of::<PacketHeader>() {
-            panic!("Invalid packet received");
+            panic!("Invalid packet received: {:?}", data);
         }
         send.send(&data);
     }
@@ -84,11 +107,20 @@ fn service_handler(
             break
         }
         if data.len() < std::mem::size_of::<PacketHeader>() {
-            panic!("Invalid packet received");
+            panic!("Invalid packet received: {:?}", data);
         }
         let mut header = PacketHeader::new(&data);
-        let mut buffer: Vec<u8> = Vec::new();
-        dispatcher(&mut buffer[std::mem::size_of::<PacketHeader>()..], header.handle, header.method, &data);
+        let mut buffer: Vec<u8> = vec![0; std::mem::size_of::<PacketHeader>()];
+        dispatcher(
+            {
+                let mut c = Cursor::new(&mut buffer);
+                c.set_position(std::mem::size_of::<PacketHeader>() as u64);
+                c
+            },
+            header.handle,
+            header.method,
+            &data,
+        );
 
         header.slot += SLOT_CALL_OR_RETURN_INDICATOR;
         header.write(&mut buffer);

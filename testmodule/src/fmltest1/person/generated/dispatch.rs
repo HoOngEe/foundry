@@ -21,24 +21,30 @@ use crate::fml::handle::{HandleInstanceId, MethodId};
 use crate::fml::port::PortId;
 use fml::handle::pool::HandlePool;
 use fml::PacketHeader;
+use std::io::Cursor;
 use std::sync::Arc;
 
-fn dispatch_1(buffer: &mut [u8], object: Arc<dyn handles::Customer + Send + Sync>, method: MethodId, data: &[u8]) {
+fn dispatch_1(
+    mut buffer: Cursor<&mut Vec<u8>>,
+    object: Arc<dyn handles::Customer + Send + Sync>,
+    method: MethodId,
+    data: &[u8],
+) {
     match method {
         1 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.add_criminal_record(a1, a2);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.reform(a1);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         3 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.provoke(a1);
-            serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &result).unwrap();
+            serde_json::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }
@@ -52,7 +58,7 @@ impl Dispatcher for ExportedHandles {
         }
     }
 
-    fn dispatch_and_call(&self, buffer: &mut [u8], handle: HandleInstanceId, method: MethodId, data: &[u8]) {
+    fn dispatch_and_call(&self, buffer: Cursor<&mut Vec<u8>>, handle: HandleInstanceId, method: MethodId, data: &[u8]) {
         match handle.trait_id {
             1 => dispatch_1(buffer, self.handles_trait1.get(handle.index as usize), method, data),
             _ => panic!(),

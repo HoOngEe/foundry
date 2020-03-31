@@ -27,7 +27,11 @@ pub struct PoliceStation {
     pub handle: ImportedHandle,
 }
 
-fn call<T: serde::Serialize, R: serde::de::DeserializeOwned>(handle: &ImportedHandle, method: MethodId, args: &T) -> R {
+pub fn call<T: serde::Serialize, R: serde::de::DeserializeOwned>(
+    handle: &ImportedHandle,
+    method: MethodId,
+    args: &T,
+) -> R {
     let mut buffer: Vec<u8> = Vec::new();
     buffer.resize(std::mem::size_of::<PacketHeader>(), 0 as u8);
     serde_json::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &args).unwrap();

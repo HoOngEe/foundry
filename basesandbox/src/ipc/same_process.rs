@@ -37,14 +37,14 @@ impl TwoWayInitialize for SameProcessLinker {
     type Client = SameProcess;
 
     fn new(_name: String) -> Self {
-        let key_server = format!("{}", generate_random_name());
-        let key_client = format!("{}", generate_random_name());
+        let key_server = generate_random_name();
+        let key_client = generate_random_name();
 
         let (send1, recv1) = bounded(256);
         let (send2, recv2) = bounded(256);
 
         POOL.lock().unwrap().insert(key_server.clone(), (send1, recv2));
-        POOL.lock().unwrap().insert(key_server.clone(), (send2, recv1));
+        POOL.lock().unwrap().insert(key_client.clone(), (send2, recv1));
 
         SameProcessLinker {
             key_server,
@@ -53,10 +53,7 @@ impl TwoWayInitialize for SameProcessLinker {
     }
 
     fn create(&self) -> (Vec<u8>, Vec<u8>) {
-        (
-            serde_cbor::to_vec(&(&self.key_server, &self.key_client)).unwrap(),
-            serde_cbor::to_vec(&(&self.key_client, &self.key_server)).unwrap(),
-        )
+        (serde_cbor::to_vec(&self.key_server).unwrap(), serde_cbor::to_vec(&self.key_client).unwrap())
     }
 }
 

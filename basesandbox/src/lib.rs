@@ -18,6 +18,7 @@ extern crate codechain_module as cmodule;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod directory;
 pub mod execution;
 pub mod ipc;
 mod test;
