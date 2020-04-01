@@ -58,7 +58,7 @@ impl PacketHeader {
             std::ptr::copy_nonoverlapping(
                 self,
                 buffer.as_mut_ptr() as *mut PacketHeader,
-                std::mem::size_of::<PacketHeader>(),
+                1,
             );
         }
     }
@@ -66,7 +66,6 @@ impl PacketHeader {
 
 #[test]
 fn encoding_packet_header() {
-    println!("{}", std::mem::size_of::<PacketHeader>());
     let ph1 = PacketHeader {
         slot: 0x1234,
         handle: HandleInstanceId {

@@ -34,17 +34,17 @@ fn dispatch_1(
         1 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.add_criminal_record(a1, a2);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.reform(a1);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         3 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.provoke(a1);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }

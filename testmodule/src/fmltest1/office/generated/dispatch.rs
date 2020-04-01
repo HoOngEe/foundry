@@ -33,22 +33,22 @@ fn dispatch_1(
         1 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.deposit(a1, a2);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let (a1, a2) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.kill_the_clerk(a1, a2);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         3 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.check_balance(a1);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         4 => {
             let () = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.ask_nearest_police_station();
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }
@@ -64,12 +64,12 @@ fn dispatch_2(
         1 => {
             let (a1,) = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.turn_yourself_in(a1);
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         2 => {
             let () = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
             let result = object.kill_the_police();
-            serde_json::to_writer(&mut buffer, &result).unwrap();
+            serde_cbor::to_writer(&mut buffer, &result).unwrap();
         }
         _ => panic!("Invalid method id given"),
     }

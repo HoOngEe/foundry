@@ -92,9 +92,8 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
             let mut packet = vec![0 as u8; std::mem::size_of::<PacketHeader>()];
             packet.append(&mut data);
             let port_table = ports.lock().unwrap();
-            println!("QWEQWEQWE");
             let result = port_table.get(&handle.port_id).unwrap().1.call(handle.id, method, packet);
-            send(&ctx, &result);
+            send(&ctx, &&result[std::mem::size_of::<PacketHeader>()..]);
         } else {
             panic!("Unexpected message")
         }

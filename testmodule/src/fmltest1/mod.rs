@@ -111,6 +111,7 @@ pub fn run() {
     let buffer: Vec<u8> = recv(&ctx1);
     let result: bool = serde_cbor::from_slice(&buffer).unwrap();
     assert_eq!(result, true);
+    done_ack(&ctx1);
 
     send(&ctx1, &"terminate");
     send(&ctx2, &"terminate");
