@@ -15,16 +15,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub mod context;
+pub mod core;
 pub mod descriptor;
-mod generated;
-pub mod handles;
 mod impls;
 pub mod preset;
 
+pub use self::core::generated::*;
 use cbsb::ipc::domain_socket::DomainSocket;
 use cbsb::ipc::same_process::SameProcess;
 use context::Context as MyContext;
-pub use generated::*;
 use preset::Preset;
 
 pub type Context = fml::context::Context<MyContext, export::ExportedHandles>;

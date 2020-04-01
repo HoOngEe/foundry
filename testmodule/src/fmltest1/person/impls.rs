@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::handles::*;
+use super::core::handles::*;
 use super::{export, get_context, Context, MyContext};
 use fml::handle::pool::NOT_DECIDED_INDEX;
 use fml::handle::{ExportedHandle, HandleInstanceId};

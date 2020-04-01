@@ -50,16 +50,12 @@ pub struct PacketHeader {
 
 impl PacketHeader {
     pub fn new(buffer: &[u8]) -> Self {
-        unsafe { std::ptr::read(buffer.as_ptr() as *const PacketHeader) }
+        unsafe { std::ptr::read(buffer.as_ptr().cast()) }
     }
 
     pub fn write(&self, buffer: &mut [u8]) {
         unsafe {
-            std::ptr::copy_nonoverlapping(
-                self,
-                buffer.as_mut_ptr() as *mut PacketHeader,
-                1,
-            );
+            std::ptr::copy_nonoverlapping(self, buffer.as_mut_ptr().cast(), 1);
         }
     }
 }
@@ -102,7 +98,7 @@ fn service_handler(
 ) {
     loop {
         let data = invoke.recv().unwrap();
-        if data.len() == 0 {
+        if data.is_empty() {
             break
         }
         if data.len() < std::mem::size_of::<PacketHeader>() {
@@ -253,12 +249,8 @@ pub fn main_routine_common3(server: &mut ServerInternal, sender_thread: thread::
         server.service_handlers_invoke[i].send([].to_vec()).unwrap();
     }
 
-    loop {
-        if let Some(handler) = server.service_handlers.pop() {
-            handler.join().unwrap();
-        } else {
-            break
-        }
+    while let Some(handler) = server.service_handlers.pop() {
+        handler.join().unwrap();
     }
 }
 

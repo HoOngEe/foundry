@@ -52,8 +52,8 @@ pub fn done_ack<I: ipc::TwoWayInitializableIpc>(ctx: &executor::Context<I, execu
 }
 
 pub fn run() {
-    executor::add_plain_thread_pool("person".to_owned(), Arc::new(|a: Vec<String>| person::main_like_test(a)));
-    executor::add_plain_thread_pool("office".to_owned(), Arc::new(|a: Vec<String>| office::main_like_test(a)));
+    executor::add_plain_thread_pool("person".to_owned(), Arc::new(person::main_like_test));
+    executor::add_plain_thread_pool("office".to_owned(), Arc::new(office::main_like_test));
 
     let ctx1 = executor::execute::<SameProcess, executor::PlainThread>("person").unwrap();
     let ctx2 = executor::execute::<SameProcess, executor::PlainThread>("office").unwrap();

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use super::generated::*;
+pub use super::core::generated::*;
 use std::collections::HashMap;
 use std::sync::Mutex;
 pub struct Context {
