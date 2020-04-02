@@ -14,16 +14,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-extern crate codechain_basesandbox as cbsb;
-extern crate codechain_fml as fml;
-#[macro_use]
-extern crate lazy_static;
-extern crate serde_cbor;
+#[derive(Serialize, Deserialize)]
+pub enum Weather {
+    Sunny,
+    Windy,
+    Foggy,
+    Cloudy,
+    Snowy,
+    Rainy,
+}
 
-#[macro_use]
-extern crate serde_derive;
+#[fml_macro::fml_macro]
+pub mod handles {
+    #[exported]
+    pub trait WeatherResponse {
+        fn weather(&self, date: String) -> super::Weather;
+    }
 
-mod fmltest1;
-mod fmltest2;
-
-pub use fmltest1::run;
+    #[imported]
+    pub trait WeatherForecast {
+        fn weather(&self, date: String) -> crate::fmltest2::cleric::core::Weather;
+    }
+}

@@ -14,16 +14,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-extern crate codechain_basesandbox as cbsb;
-extern crate codechain_fml as fml;
-#[macro_use]
-extern crate lazy_static;
-extern crate serde_cbor;
+use super::{get_context, impls};
+use fml::handle::{ExportedHandle, HandlePreset, ImportedHandle};
+use fml::port::PortId;
 
-#[macro_use]
-extern crate serde_derive;
+pub struct Preset {}
 
-mod fmltest1;
-mod fmltest2;
+impl HandlePreset for Preset {
+    fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
+        let port_table = get_context().ports.lock().unwrap();
+        let (config, port) = port_table.get(&port_id).unwrap();
+        if config.kind == "cleric" {
+            let bank = port.dispatcher_get().create_handle_weatherforecast(impls::Zeus {});
+            return Ok(bank.handle)
+        }
+        Err("Nothing to export to this kind of module".to_owned())
+    }
 
-pub use fmltest1::run;
+    fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
+        Ok(())
+    }
+}

@@ -14,16 +14,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-extern crate codechain_basesandbox as cbsb;
-extern crate codechain_fml as fml;
-#[macro_use]
-extern crate lazy_static;
-extern crate serde_cbor;
+use super::core::{handles::*, Weather};
 
-#[macro_use]
-extern crate serde_derive;
+pub struct Zeus {}
 
-mod fmltest1;
-mod fmltest2;
-
-pub use fmltest1::run;
+impl WeatherForecast for Zeus {
+    fn weather(&self, date: String) -> Weather {
+        let dice_value = date.into_bytes().into_iter().fold(0, |acc, val| acc + val) % 6;
+        match dice_value {
+            0 => Weather::Sunny,
+            1 => Weather::Windy,
+            2 => Weather::Foggy,
+            3 => Weather::Cloudy,
+            4 => Weather::Snowy,
+            5 => Weather::Rainy,
+            _ => panic!("Range is restricted"),
+        }
+    }
+}

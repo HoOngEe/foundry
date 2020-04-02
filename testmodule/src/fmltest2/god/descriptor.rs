@@ -13,17 +13,3 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-extern crate codechain_basesandbox as cbsb;
-extern crate codechain_fml as fml;
-#[macro_use]
-extern crate lazy_static;
-extern crate serde_cbor;
-
-#[macro_use]
-extern crate serde_derive;
-
-mod fmltest1;
-mod fmltest2;
-
-pub use fmltest1::run;
