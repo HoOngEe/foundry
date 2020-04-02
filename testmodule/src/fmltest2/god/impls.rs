@@ -14,13 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::core::{
-    handles::*,
-    types::{GroundState, Rain, Weather},
+use super::{
+    core::{
+        handles::*,
+        types::{GroundState, Issue, Rain, Weather},
+    },
+    get_context,
 };
 
 pub struct Zeus {}
 pub struct Demeter {}
+
+pub struct Gaia {
+    pub power: u64,
+}
 
 impl WeatherForecast for Zeus {
     fn weather(&self, date: String) -> Weather {
@@ -49,6 +56,32 @@ impl RainOracle for Demeter {
             GroundState::Wet => None,
             GroundState::Dry => Some(Rain::Fine),
             GroundState::Drought => Some(Rain::Heavy),
+        }
+    }
+}
+
+impl TalkToGods for Gaia {
+    fn talk(&self, issue: Vec<Issue>) -> Vec<Issue> {
+        let next_mind_state = match issue.last() {
+            Some(Issue::Entangled(_, degree)) if *degree > 0 => {
+                Issue::Entangled(String::from("God"), degree / self.power)
+            }
+            _ => Issue::Resolved,
+        };
+        let mut new_mind = issue;
+        match &next_mind_state {
+            Issue::Entangled(_, degree) if degree % 2 == 0 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_humans.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            Issue::Entangled(_, degree) if degree % 2 == 1 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_clerics.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            _ => {
+                new_mind.push(Issue::Resolved);
+                new_mind
+            }
         }
     }
 }

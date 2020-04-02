@@ -46,6 +46,15 @@ impl HandlePreset for Preset {
                     handle,
                 })
             }
+            ("human", 7) => {
+                let talk_to_humans = &mut get_context().custom.talk.write().unwrap();
+                if talk_to_humans.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **talk_to_humans = Some(import::TalkToHumans {
+                    handle,
+                })
+            }
             _ => panic!("Invalid handle import"),
         };
         Ok(())

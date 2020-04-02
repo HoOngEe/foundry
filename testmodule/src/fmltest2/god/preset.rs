@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{get_context, impls};
+use super::{get_context, impls, import};
 use fml::handle::{ExportedHandle, HandlePreset, ImportedHandle};
 use fml::port::PortId;
 
@@ -33,11 +33,45 @@ impl HandlePreset for Preset {
                 let rain_oracle_giver = port.dispatcher_get().create_handle_rainoraclegiver(impls::Zeus {});
                 Ok(rain_oracle_giver.handle)
             }
+            ("cleric", 11) => {
+                let talk_to_gods = port.dispatcher_get().create_handle_talktogods(impls::Gaia {
+                    power: 5,
+                });
+                Ok(talk_to_gods.handle)
+            }
+            ("human", 13) => {
+                let talk_to_gods = port.dispatcher_get().create_handle_talktogods(impls::Gaia {
+                    power: 5,
+                });
+                Ok(talk_to_gods.handle)
+            }
             _ => Err("Nothing to export to this kind of module".to_owned()),
         }
     }
 
-    fn import(&mut self, _handle: ImportedHandle) -> Result<(), String> {
-        Err("Import is not allowed".to_owned())
+    fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
+        let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
+        match (kind.as_str(), handle.port_id) {
+            ("cleric", 10) => {
+                let talk_to_clerics = &mut get_context().custom.talk_to_clerics.write().unwrap();
+                if talk_to_clerics.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **talk_to_clerics = Some(import::TalkToClerics {
+                    handle,
+                })
+            }
+            ("human", 12) => {
+                let talk_to_humans = &mut get_context().custom.talk_to_humans.write().unwrap();
+                if talk_to_humans.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **talk_to_humans = Some(import::TalkToHumans {
+                    handle,
+                })
+            }
+            _ => panic!("Invalid handle import"),
+        };
+        Ok(())
     }
 }

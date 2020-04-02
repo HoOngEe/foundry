@@ -33,6 +33,18 @@ impl HandlePreset for Preset {
                 let pray_response = port.dispatcher_get().create_handle_prayresponse(impls::Priest {});
                 Ok(pray_response.handle)
             }
+            ("human", 8) => {
+                let pray_response = port.dispatcher_get().create_handle_talktoclerics(impls::Cardinal {
+                    power: 3,
+                });
+                Ok(pray_response.handle)
+            }
+            ("god", 10) => {
+                let pray_response = port.dispatcher_get().create_handle_talktoclerics(impls::Cardinal {
+                    power: 3,
+                });
+                Ok(pray_response.handle)
+            }
             _ => Err("Nothing to export to this kind of module".to_owned()),
         }
     }
@@ -66,6 +78,26 @@ impl HandlePreset for Preset {
                     return Err("Handle already imported".to_owned())
                 } else {
                     Ok(**ground_observer = Some(import::GroundObserver {
+                        handle,
+                    }))
+                }
+            }
+            ("human", 9) => {
+                let talk_to_humans = &mut get_context().custom.talk_to_humans.write().unwrap();
+                if talk_to_humans.is_some() {
+                    return Err("Handle already imported".to_owned())
+                } else {
+                    Ok(**talk_to_humans = Some(import::TalkToHumans {
+                        handle,
+                    }))
+                }
+            }
+            ("god", 11) => {
+                let talk_to_gods = &mut get_context().custom.talk_to_gods.write().unwrap();
+                if talk_to_gods.is_some() {
+                    return Err("Handle already imported".to_owned())
+                } else {
+                    Ok(**talk_to_gods = Some(import::TalkToGods {
                         handle,
                     }))
                 }

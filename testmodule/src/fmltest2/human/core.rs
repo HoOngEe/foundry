@@ -37,6 +37,12 @@ pub mod types {
         Dry,
         Drought,
     }
+
+    #[derive(Clone, Serialize, Deserialize)]
+    pub enum Issue {
+        Entangled(String, u64),
+        Resolved,
+    }
 }
 
 #[fml_macro::fml_macro]
@@ -64,5 +70,20 @@ pub mod handles {
     #[imported]
     pub trait PrayResponse {
         fn respond_to_rain_pray(&self) -> Option<Rain>;
+    }
+
+    #[imported]
+    pub trait TalkToClerics {
+        fn talk(&self, issue: Vec<Issue>) -> Vec<Issue>;
+    }
+
+    #[exported]
+    pub trait TalkToHumans {
+        fn talk(&self, issue: Vec<Issue>) -> Vec<Issue>;
+    }
+
+    #[imported]
+    pub trait TalkToGods {
+        fn talk(&self, issue: Vec<Issue>) -> Vec<Issue>;
     }
 }

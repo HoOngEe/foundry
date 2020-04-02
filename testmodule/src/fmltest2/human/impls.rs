@@ -17,7 +17,7 @@
 use super::{
     core::{
         handles::*,
-        types::{GroundState, Weather},
+        types::{GroundState, Issue, Weather},
     },
     get_context,
 };
@@ -25,6 +25,9 @@ use super::{
 pub struct WeatherForecaster {}
 pub struct Farmer {
     pub farm_state: GroundState,
+}
+pub struct OpenMindedCitizen {
+    pub power: u64,
 }
 
 impl WeatherRequest for WeatherForecaster {
@@ -46,5 +49,31 @@ impl PrayRequest for Farmer {
 impl GroundObserver for Farmer {
     fn submit_ground_state(&self) -> GroundState {
         self.farm_state
+    }
+}
+
+impl TalkToHumans for OpenMindedCitizen {
+    fn talk(&self, issue: Vec<Issue>) -> Vec<Issue> {
+        let next_mind_state = match issue.last() {
+            Some(Issue::Entangled(_, degree)) if *degree > 0 => {
+                Issue::Entangled(String::from("Human"), degree / self.power)
+            }
+            _ => Issue::Resolved,
+        };
+        let mut new_mind = issue;
+        match &next_mind_state {
+            Issue::Entangled(_, degree) if degree % 2 == 0 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_clerics.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            Issue::Entangled(_, degree) if degree % 2 == 1 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_gods.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            _ => {
+                new_mind.push(Issue::Resolved);
+                new_mind
+            }
+        }
     }
 }

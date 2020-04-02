@@ -15,11 +15,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub use super::core::generated::*;
+use std::sync::RwLock;
 
-pub struct Context {}
+#[derive(Default)]
+pub struct Context {
+    pub talk_to_clerics: RwLock<Option<import::TalkToClerics>>,
+    pub talk_to_humans: RwLock<Option<import::TalkToHumans>>,
+}
 
 impl fml::context::Custom for Context {
     fn new(_context: &fml::context::Config) -> Self {
-        Context {}
+        Default::default()
     }
 }
