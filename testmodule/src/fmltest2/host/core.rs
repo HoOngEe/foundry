@@ -33,6 +33,11 @@ pub mod handles {
         fn weather(&self, date: String) -> Weather;
     }
 
+    #[imported]
+    pub trait PrayRequest {
+        fn pray_for_rain(&self) -> String;
+    }
+
     #[exported]
     pub trait Empty {
         fn empty(&self);

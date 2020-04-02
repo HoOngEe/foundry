@@ -24,6 +24,19 @@ pub mod types {
         Snowy,
         Rainy,
     }
+
+    #[derive(Serialize, Deserialize, Debug)]
+    pub enum Rain {
+        Fine,
+        Heavy,
+    }
+
+    #[derive(Clone, Copy, Serialize, Deserialize)]
+    pub enum GroundState {
+        Wet,
+        Dry,
+        Drought,
+    }
 }
 
 #[fml_macro::fml_macro]
@@ -36,5 +49,20 @@ pub mod handles {
     #[imported]
     pub trait WeatherResponse {
         fn weather(&self, date: String) -> Weather;
+    }
+
+    #[exported]
+    pub trait PrayRequest {
+        fn pray_for_rain(&self) -> String;
+    }
+
+    #[exported]
+    pub trait GroundObserver {
+        fn submit_ground_state(&self) -> GroundState;
+    }
+
+    #[imported]
+    pub trait PrayResponse {
+        fn respond_to_rain_pray(&self) -> Option<Rain>;
     }
 }

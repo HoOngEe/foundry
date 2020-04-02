@@ -19,12 +19,14 @@ use std::sync::Mutex;
 
 pub struct Context {
     pub weather_response: Mutex<Option<import::WeatherResponse>>,
+    pub pray_response: Mutex<Option<import::PrayResponse>>,
 }
 
 impl fml::context::Custom for Context {
     fn new(_context: &fml::context::Config) -> Self {
         Context {
             weather_response: Mutex::new(None),
+            pray_response: Mutex::new(None),
         }
     }
 }

@@ -24,14 +24,20 @@ impl HandlePreset for Preset {
     fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
         let port_table = get_context().ports.lock().unwrap();
         let (config, port) = port_table.get(&port_id).unwrap();
-        if config.kind == "cleric" {
-            let bank = port.dispatcher_get().create_handle_weatherforecast(impls::Zeus {});
-            return Ok(bank.handle)
+        match (config.kind.as_str(), port_id) {
+            ("cleric", 1) => {
+                let weather_request = port.dispatcher_get().create_handle_weatherforecast(impls::Zeus {});
+                Ok(weather_request.handle)
+            }
+            ("cleric", 3) => {
+                let rain_oracle_giver = port.dispatcher_get().create_handle_rainoraclegiver(impls::Zeus {});
+                Ok(rain_oracle_giver.handle)
+            }
+            _ => Err("Nothing to export to this kind of module".to_owned()),
         }
-        Err("Nothing to export to this kind of module".to_owned())
     }
 
-    fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
-        Ok(())
+    fn import(&mut self, _handle: ImportedHandle) -> Result<(), String> {
+        Err("Import is not allowed".to_owned())
     }
 }

@@ -206,6 +206,62 @@ pub fn run_for_weather() {
     terminate_modules(vec![ctx_human, ctx_host, ctx_cleric, ctx_god]);
 }
 
+pub fn run_for_pray() {
+    create_ctx_and_config!(
+        (ctx_human, config_human, "human", human::main_like_test),
+        (ctx_host, config_host, "host", host::main_like_test),
+        (ctx_cleric, config_cleric, "cleric", cleric::main_like_test),
+        (ctx_god, config_god, "god", god::main_like_test)
+    );
+
+    // linkers should live long
+    let linker_host_human = create_same_process_linker();
+    let linker_human_cleric = create_same_process_linker();
+    let linker_human_cleric2 = create_same_process_linker();
+    let linker_cleric_god = create_same_process_linker();
+
+    link_two_modules_through_port(
+        (&ctx_host, &config_host),
+        (&ctx_human, &config_human),
+        3,
+        linker_host_human.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_human, &config_human),
+        (&ctx_cleric, &config_cleric),
+        4,
+        linker_human_cleric.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_human, &config_human),
+        (&ctx_cleric, &config_cleric),
+        6,
+        linker_human_cleric2.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_god, &config_god),
+        3,
+        linker_cleric_god.create(),
+    );
+
+    let pray_request_handle = export_handle_from_module_port(&ctx_human, 3);
+    let ground_observer_handle = export_handle_from_module_port(&ctx_human, 6);
+    let pray_response_handle = export_handle_from_module_port(&ctx_cleric, 4);
+    let rain_oracle_giver_handle = export_handle_from_module_port(&ctx_god, 3);
+
+    import_handle_to_module(&ctx_host, pray_request_handle);
+    import_handle_to_module(&ctx_human, pray_response_handle);
+    import_handle_to_module(&ctx_cleric, rain_oracle_giver_handle);
+    import_handle_to_module(&ctx_cleric, ground_observer_handle);
+
+    let pray_request_arg = serde_cbor::to_vec(&()).unwrap();
+    let admiration: String = call_module_function(&ctx_host, pray_request_handle, 1, pray_request_arg);
+    assert_eq!(admiration, "Your majesty, my farm will fournish thanks for your Heavy rain");
+
+    terminate_modules(vec![ctx_human, ctx_host, ctx_cleric, ctx_god]);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,5 +269,10 @@ mod tests {
     #[test]
     fn fmltest2_simple() {
         run_for_weather();
+    }
+
+    #[test]
+    fn fmltest2_pray() {
+        run_for_pray();
     }
 }

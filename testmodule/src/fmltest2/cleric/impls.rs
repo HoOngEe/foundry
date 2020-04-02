@@ -15,14 +15,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
-    core::{handles::*, types::Weather},
+    core::{
+        handles::*,
+        types::{Rain, Weather},
+    },
     get_context,
 };
 
 pub struct Bishop {}
+pub struct Priest {}
+pub struct Cardinal {}
 
 impl WeatherResponse for Bishop {
     fn weather(&self, date: String) -> Weather {
         get_context().custom.weather_forecast.lock().unwrap().as_ref().unwrap().weather(date)
+    }
+}
+
+impl PrayResponse for Priest {
+    fn respond_to_rain_pray(&self) -> Option<Rain> {
+        let rain_oracle = get_context().custom.rain_oracle_giver.lock().unwrap().as_ref().unwrap().get_rain_oracle();
+        let ground_state = get_context().custom.ground_observer.lock().unwrap().as_ref().unwrap().submit_ground_state();
+        rain_oracle.determine_rain_level(ground_state)
     }
 }

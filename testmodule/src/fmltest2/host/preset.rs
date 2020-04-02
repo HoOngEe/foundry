@@ -14,29 +14,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::{get_context, impls, import};
+use super::{get_context, import};
 use fml::handle::{ExportedHandle, HandlePreset, ImportedHandle};
 use fml::port::PortId;
 
 pub struct Preset {}
 
 impl HandlePreset for Preset {
-    fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
+    fn export(&mut self, _port_id: PortId) -> Result<ExportedHandle, String> {
         Err("Nothing to export".to_owned())
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
         let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
-        if kind != "human" {
-            panic!("Invalid handle import")
-        }
-        let weather = &mut get_context().custom.weather.lock().unwrap();
-        if weather.is_some() {
-            return Err("Handle already imported".to_owned())
-        }
-        **weather = Some(import::WeatherRequest {
-            handle,
-        });
+        match (kind.as_str(), handle.port_id) {
+            ("human", 1) => {
+                let weather_request = &mut get_context().custom.weather.lock().unwrap();
+                if weather_request.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **weather_request = Some(import::WeatherRequest {
+                    handle,
+                });
+            }
+            ("human", 3) => {
+                let pray_request = &mut get_context().custom.pray.lock().unwrap();
+                if pray_request.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **pray_request = Some(import::PrayRequest {
+                    handle,
+                })
+            }
+            _ => panic!("Invalid handle import"),
+        };
         Ok(())
     }
 }

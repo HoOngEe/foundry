@@ -14,9 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::core::{handles::*, types::Weather};
+use super::core::{
+    handles::*,
+    types::{GroundState, Rain, Weather},
+};
 
 pub struct Zeus {}
+pub struct Demeter {}
 
 impl WeatherForecast for Zeus {
     fn weather(&self, date: String) -> Weather {
@@ -29,6 +33,22 @@ impl WeatherForecast for Zeus {
             4 => Weather::Snowy,
             5 => Weather::Rainy,
             _ => panic!("Range is restricted"),
+        }
+    }
+}
+
+impl RainOracleGiver for Zeus {
+    fn get_rain_oracle(&self) -> export::RainOracle {
+        export::get_handle_pool(3).create_handle_rainoracle(Demeter {})
+    }
+}
+
+impl RainOracle for Demeter {
+    fn determine_rain_level(&self, ground_state: GroundState) -> Option<Rain> {
+        match ground_state {
+            GroundState::Wet => None,
+            GroundState::Dry => Some(Rain::Fine),
+            GroundState::Drought => Some(Rain::Heavy),
         }
     }
 }

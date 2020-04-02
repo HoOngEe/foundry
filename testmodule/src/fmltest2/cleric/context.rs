@@ -17,14 +17,15 @@
 pub use super::core::generated::*;
 use std::sync::Mutex;
 
+#[derive(Default)]
 pub struct Context {
     pub weather_forecast: Mutex<Option<import::WeatherForecast>>,
+    pub rain_oracle_giver: Mutex<Option<import::RainOracleGiver>>,
+    pub ground_observer: Mutex<Option<import::GroundObserver>>,
 }
 
 impl fml::context::Custom for Context {
     fn new(_context: &fml::context::Config) -> Self {
-        Context {
-            weather_forecast: Mutex::new(None),
-        }
+        Default::default()
     }
 }

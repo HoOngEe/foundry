@@ -24,25 +24,53 @@ impl HandlePreset for Preset {
     fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
         let port_table = get_context().ports.lock().unwrap();
         let (config, port) = port_table.get(&port_id).unwrap();
-        if config.kind == "god" || config.kind == "human" {
-            let bank = port.dispatcher_get().create_handle_weatherresponse(impls::Bishop {});
-            return Ok(bank.handle)
+        match (config.kind.as_str(), port_id) {
+            ("human", 2) => {
+                let weather_response = port.dispatcher_get().create_handle_weatherresponse(impls::Bishop {});
+                Ok(weather_response.handle)
+            }
+            ("human", 4) => {
+                let pray_response = port.dispatcher_get().create_handle_prayresponse(impls::Priest {});
+                Ok(pray_response.handle)
+            }
+            _ => Err("Nothing to export to this kind of module".to_owned()),
         }
-        Err("Nothing to export to this kind of module".to_owned())
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
         let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
-        if kind != "god" && kind != "human" {
-            panic!("Invalid handle import")
+        match (kind.as_str(), handle.port_id) {
+            ("god", 1) => {
+                let weather_forecast = &mut get_context().custom.weather_forecast.lock().unwrap();
+                if weather_forecast.is_some() {
+                    Err("Handle already imported".to_owned())
+                } else {
+                    Ok(**weather_forecast = Some(import::WeatherForecast {
+                        handle,
+                    }))
+                }
+            }
+            ("god", 3) => {
+                let rain_oracle_giver = &mut get_context().custom.rain_oracle_giver.lock().unwrap();
+                if rain_oracle_giver.is_some() {
+                    return Err("Handle already imported".to_owned())
+                } else {
+                    Ok(**rain_oracle_giver = Some(import::RainOracleGiver {
+                        handle,
+                    }))
+                }
+            }
+            ("human", 6) => {
+                let ground_observer = &mut get_context().custom.ground_observer.lock().unwrap();
+                if ground_observer.is_some() {
+                    return Err("Handle already imported".to_owned())
+                } else {
+                    Ok(**ground_observer = Some(import::GroundObserver {
+                        handle,
+                    }))
+                }
+            }
+            _ => panic!("Invalid handle import"),
         }
-        let weather_forecast = &mut get_context().custom.weather_forecast.lock().unwrap();
-        if weather_forecast.is_some() {
-            return Err("Handle already imported".to_owned())
-        }
-        **weather_forecast = Some(import::WeatherForecast {
-            handle,
-        });
-        Ok(())
     }
 }

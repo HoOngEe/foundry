@@ -15,14 +15,36 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
-    core::{handles::*, types::Weather},
+    core::{
+        handles::*,
+        types::{GroundState, Weather},
+    },
     get_context,
 };
 
 pub struct WeatherForecaster {}
+pub struct Farmer {
+    pub farm_state: GroundState,
+}
 
 impl WeatherRequest for WeatherForecaster {
     fn weather(&self, date: String) -> Weather {
         get_context().custom.weather_response.lock().unwrap().as_ref().unwrap().weather(date)
+    }
+}
+
+impl PrayRequest for Farmer {
+    fn pray_for_rain(&self) -> String {
+        let rain = get_context().custom.pray_response.lock().unwrap().as_ref().unwrap().respond_to_rain_pray();
+        match rain {
+            Some(rain) => format!("Your majesty, my farm will fournish thanks for your {:?} rain", rain),
+            None => format!("Your majesty, my farm is still wet thanks for your help"),
+        }
+    }
+}
+
+impl GroundObserver for Farmer {
+    fn submit_ground_state(&self) -> GroundState {
+        self.farm_state
     }
 }
