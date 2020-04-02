@@ -60,6 +60,12 @@ pub enum Weather {
     Rainy,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Mind {
+    Entangled(String, u64),
+    Resolved,
+}
+
 #[inline]
 fn create_config_with_module_name(module_name: &str) -> Config {
     Config {
@@ -262,6 +268,133 @@ pub fn run_for_pray() {
     terminate_modules(vec![ctx_human, ctx_host, ctx_cleric, ctx_god]);
 }
 
+pub fn run_for_talk() {
+    create_ctx_and_config!(
+        (ctx_human, config_human, "human", human::main_like_test),
+        (ctx_host, config_host, "host", host::main_like_test),
+        (ctx_cleric, config_cleric, "cleric", cleric::main_like_test),
+        (ctx_god, config_god, "god", god::main_like_test)
+    );
+
+    // linkers should live long
+    let linker_host_human_talk_to_humans = create_same_process_linker();
+    let linker_human_cleric_talk_to_clerics = create_same_process_linker();
+    let linker_human_cleric_talk_to_humans = create_same_process_linker();
+    let linker_cleric_god_talk_to_clerics = create_same_process_linker();
+    let linker_cleric_god_talk_to_gods = create_same_process_linker();
+    let linker_human_god_talk_to_humans = create_same_process_linker();
+    let linker_human_god_talk_to_gods = create_same_process_linker();
+
+    link_two_modules_through_port(
+        (&ctx_host, &config_host),
+        (&ctx_human, &config_human),
+        7,
+        linker_host_human_talk_to_humans.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_human, &config_human),
+        8,
+        linker_human_cleric_talk_to_clerics.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_human, &config_human),
+        9,
+        linker_human_cleric_talk_to_humans.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_god, &config_god),
+        10,
+        linker_cleric_god_talk_to_clerics.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_god, &config_god),
+        11,
+        linker_cleric_god_talk_to_gods.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_human, &config_human),
+        (&ctx_god, &config_god),
+        12,
+        linker_human_god_talk_to_humans.create(),
+    );
+    link_two_modules_through_port(
+        (&ctx_human, &config_human),
+        (&ctx_god, &config_god),
+        13,
+        linker_human_god_talk_to_gods.create(),
+    );
+
+    let talk_to_humans_for_host = export_handle_from_module_port(&ctx_human, 7);
+    let talk_to_humans_for_cleric = export_handle_from_module_port(&ctx_human, 9);
+    let talk_to_humans_for_god = export_handle_from_module_port(&ctx_human, 12);
+
+    let talk_to_clerics_for_human = export_handle_from_module_port(&ctx_cleric, 8);
+    let talk_to_clerics_for_god = export_handle_from_module_port(&ctx_cleric, 10);
+
+    let talk_to_gods_for_human = export_handle_from_module_port(&ctx_god, 13);
+    let talk_to_gods_for_cleric = export_handle_from_module_port(&ctx_god, 11);
+
+    import_handle_to_module(&ctx_host, talk_to_humans_for_host);
+
+    import_handle_to_module(&ctx_human, talk_to_clerics_for_human);
+    import_handle_to_module(&ctx_human, talk_to_gods_for_human);
+
+    import_handle_to_module(&ctx_cleric, talk_to_humans_for_cleric);
+    import_handle_to_module(&ctx_cleric, talk_to_gods_for_cleric);
+
+    import_handle_to_module(&ctx_god, talk_to_humans_for_god);
+    import_handle_to_module(&ctx_god, talk_to_clerics_for_god);
+
+    let mind = vec![Mind::Entangled(String::from("Host"), 61000)];
+    let pray_request_arg = serde_cbor::to_vec(&(mind.clone(),)).unwrap();
+    let result: Vec<Mind> = call_module_function(&ctx_host, talk_to_humans_for_host, 1, pray_request_arg);
+    assert_eq!(result, talk_result_oracle(mind));
+
+    terminate_modules(vec![ctx_human, ctx_host, ctx_cleric, ctx_god]);
+}
+
+fn talk_result_oracle(mut mind: Vec<Mind>) -> Vec<Mind> {
+    let positions = ["Human", "Cleric", "God"];
+    let rotator = |prev, degree| {
+        let current = if degree % 2 == 0 {
+            let mut iter = positions.iter().cycle().skip_while(|position| **position != prev);
+            iter.next();
+            iter.next().unwrap()
+        } else {
+            let mut iter = positions.iter().rev().cycle().skip_while(|posititon| **posititon != prev);
+            iter.next();
+            iter.next().unwrap()
+        };
+        String::from(*current)
+    };
+
+    match mind.last() {
+        Some(Mind::Entangled(prev_loc, degree)) if *degree > 0 => {
+            let next_loc = match (prev_loc.as_str(), degree) {
+                ("Host", _) => String::from("Human"),
+                (prev, degree) => rotator(prev, degree)
+            };
+            let decreased_degree = match next_loc.as_str() {
+                "Host" => degree / 2,
+                "Human" => degree / 2,
+                "Cleric" => degree / 3,
+                "God" => degree / 5,
+                _ => unreachable!()
+            }; 
+            mind.push(Mind::Entangled(next_loc, decreased_degree));
+            talk_result_oracle(mind)
+        }
+        _ => {
+            mind.push(Mind::Resolved);
+            mind
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -274,5 +407,10 @@ mod tests {
     #[test]
     fn fmltest2_pray() {
         run_for_pray();
+    }
+
+    #[test]
+    fn fmltest3_talk() {
+        run_for_talk();
     }
 }

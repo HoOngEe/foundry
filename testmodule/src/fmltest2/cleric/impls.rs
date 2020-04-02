@@ -17,14 +17,16 @@
 use super::{
     core::{
         handles::*,
-        types::{Rain, Weather},
+        types::{Mind, Rain, Weather},
     },
     get_context,
 };
 
 pub struct Bishop {}
 pub struct Priest {}
-pub struct Cardinal {}
+pub struct Cardinal {
+    pub power: u64,
+}
 
 impl WeatherResponse for Bishop {
     fn weather(&self, date: String) -> Weather {
@@ -37,5 +39,31 @@ impl PrayResponse for Priest {
         let rain_oracle = get_context().custom.rain_oracle_giver.lock().unwrap().as_ref().unwrap().get_rain_oracle();
         let ground_state = get_context().custom.ground_observer.lock().unwrap().as_ref().unwrap().submit_ground_state();
         rain_oracle.determine_rain_level(ground_state)
+    }
+}
+
+impl TalkToClerics for Cardinal {
+    fn talk(&self, mind: Vec<Mind>) -> Vec<Mind> {
+        let next_mind_state = match mind.last() {
+            Some(Mind::Entangled(_, degree)) if *degree > 0 => {
+                Mind::Entangled(String::from("Cleric"), degree / self.power)
+            }
+            _ => Mind::Resolved,
+        };
+        let mut new_mind = mind;
+        match &next_mind_state {
+            Mind::Entangled(_, degree) if degree % 2 == 0 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_gods.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            Mind::Entangled(_, degree) if degree % 2 == 1 => {
+                new_mind.push(next_mind_state);
+                get_context().custom.talk_to_humans.read().unwrap().as_ref().unwrap().talk(new_mind)
+            }
+            _ => {
+                new_mind.push(Mind::Resolved);
+                new_mind
+            }
+        }
     }
 }

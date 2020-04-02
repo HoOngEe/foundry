@@ -41,6 +41,24 @@ impl HandlePreset for Preset {
                 });
                 Ok(ground_observer.handle)
             }
+            ("host", 7) => {
+                let talk_to_humans = port.dispatcher_get().create_handle_talktohumans(impls::OpenMindedCitizen {
+                    power: 2,
+                });
+                Ok(talk_to_humans.handle)
+            }
+            ("cleric", 9) => {
+                let talk_to_humans = port.dispatcher_get().create_handle_talktohumans(impls::OpenMindedCitizen {
+                    power: 2,
+                });
+                Ok(talk_to_humans.handle)
+            }
+            ("god", 12) => {
+                let talk_to_humans = port.dispatcher_get().create_handle_talktohumans(impls::OpenMindedCitizen {
+                    power: 2,
+                });
+                Ok(talk_to_humans.handle)
+            }
             _ => Err("Nothing to export to this kind of module".to_owned()),
         }
     }
@@ -63,6 +81,24 @@ impl HandlePreset for Preset {
                     return Err("Handle already imported".to_owned())
                 }
                 **pray_response = Some(import::PrayResponse {
+                    handle,
+                })
+            }
+            ("cleric", 8) => {
+                let talk_to_clerics = &mut get_context().custom.talk_to_clerics.write().unwrap();
+                if talk_to_clerics.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **talk_to_clerics = Some(import::TalkToClerics {
+                    handle,
+                })
+            }
+            ("god", 13) => {
+                let talk_to_gods = &mut get_context().custom.talk_to_gods.write().unwrap();
+                if talk_to_gods.is_some() {
+                    return Err("Handle already imported".to_owned())
+                }
+                **talk_to_gods = Some(import::TalkToGods {
                     handle,
                 })
             }

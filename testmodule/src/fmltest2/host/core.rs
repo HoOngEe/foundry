@@ -24,6 +24,12 @@ pub mod types {
         Snowy,
         Rainy,
     }
+
+    #[derive(Clone, Serialize, Deserialize)]
+    pub enum Mind {
+        Entangled(String, u64),
+        Resolved,
+    }
 }
 
 #[fml_macro::fml_macro]
@@ -36,6 +42,11 @@ pub mod handles {
     #[imported]
     pub trait PrayRequest {
         fn pray_for_rain(&self) -> String;
+    }
+
+    #[imported]
+    pub trait TalkToHumans {
+        fn talk(&self, mind: Vec<Mind>) -> Vec<Mind>;
     }
 
     #[exported]

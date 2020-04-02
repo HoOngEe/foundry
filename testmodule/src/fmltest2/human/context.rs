@@ -15,18 +15,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub use super::core::generated::*;
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 
+#[derive(Default)]
 pub struct Context {
     pub weather_response: Mutex<Option<import::WeatherResponse>>,
     pub pray_response: Mutex<Option<import::PrayResponse>>,
+    pub talk_to_clerics: RwLock<Option<import::TalkToClerics>>,
+    pub talk_to_gods: RwLock<Option<import::TalkToGods>>,
 }
 
 impl fml::context::Custom for Context {
     fn new(_context: &fml::context::Config) -> Self {
-        Context {
-            weather_response: Mutex::new(None),
-            pray_response: Mutex::new(None),
-        }
+        Default::default()
     }
 }

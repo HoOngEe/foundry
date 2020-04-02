@@ -37,6 +37,12 @@ pub mod types {
         Fine,
         Heavy,
     }
+
+    #[derive(Clone, Serialize, Deserialize)]
+    pub enum Mind {
+        Entangled(String, u64),
+        Resolved,
+    }
 }
 
 #[fml_macro::fml_macro]
@@ -69,5 +75,20 @@ pub mod handles {
     #[imported]
     pub trait RainOracleGiver {
         fn get_rain_oracle(&self) -> import::RainOracle;
+    }
+
+    #[exported]
+    pub trait TalkToClerics {
+        fn talk(&self, mind: Vec<Mind>) -> Vec<Mind>;
+    }
+
+    #[imported]
+    pub trait TalkToHumans {
+        fn talk(&self, mind: Vec<Mind>) -> Vec<Mind>;
+    }
+
+    #[imported]
+    pub trait TalkToGods {
+        fn talk(&self, mind: Vec<Mind>) -> Vec<Mind>;
     }
 }
