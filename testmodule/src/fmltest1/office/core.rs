@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use super::generated::*;
-
 /*
 HOW TO DEFINE HANDLES
 
@@ -28,20 +26,26 @@ For example, the return type is allowed to be Vec<(u8, import::SomeHandle)>
 If you want mutablity to internal state of Handle or Global context, you should consider Mutex.
 */
 
-pub trait Bank {
-    fn deposit(&self, name: String, amount: u64) -> u64;
-    fn kill_the_clerk(&self, name: String, weapon: String) -> bool;
-    fn check_balance(&self, name: String) -> u64;
-    fn ask_nearest_police_station(&self) -> export::PoliceStation;
-}
+#[fml_macro::fml_macro]
+pub mod handles {
+    #[exported]
+    pub trait Bank {
+        fn deposit(&self, name: String, amount: u64) -> u64;
+        fn kill_the_clerk(&self, name: String, weapon: String) -> bool;
+        fn check_balance(&self, name: String) -> u64;
+        fn ask_nearest_police_station(&self) -> export::PoliceStation;
+    }
 
-pub trait PoliceStation {
-    fn turn_yourself_in(&self, bail: u64) -> String;
-    fn kill_the_police(&self) -> ();
-}
+    #[exported]
+    pub trait PoliceStation {
+        fn turn_yourself_in(&self, bail: u64) -> String;
+        fn kill_the_police(&self);
+    }
 
-pub trait Customer {
-    fn add_criminal_record(&self, name: String, record: String);
-    fn reform(&self, name: String) -> bool;
-    fn provoke(&self, name: String) -> import::Customer;
+    #[imported]
+    pub trait Customer {
+        fn add_criminal_record(&self, name: String, record: String);
+        fn reform(&self, name: String) -> bool;
+        fn provoke(&self, name: String) -> import::Customer;
+    }
 }

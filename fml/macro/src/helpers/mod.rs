@@ -16,4 +16,25 @@
 
 pub mod dispatch;
 pub mod export;
+pub mod handles;
 pub mod import;
+pub mod types;
+
+pub use self::dispatch::generate_dispatch;
+pub use self::export::generate_export;
+pub use self::handles::generate_handles;
+pub use self::import::generate_import;
+
+pub fn path_of_single_ident(ident: syn::Ident) -> syn::Path {
+    syn::Path {
+        leading_colon: None,
+        segments: {
+            let mut punc = syn::punctuated::Punctuated::new();
+            punc.push(syn::PathSegment {
+                ident,
+                arguments: syn::PathArguments::None,
+            });
+            punc
+        },
+    }
+}

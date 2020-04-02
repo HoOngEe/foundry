@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use super::handles::*;
+use super::core::handles::*;
 use super::{export, get_context};
 use fml::port::PortId;
 
@@ -46,7 +46,7 @@ impl Bank for JustBank {
     }
 
     fn ask_nearest_police_station(&self) -> export::PoliceStation {
-        export::get_handle_pool(self.port_id).create_handle_police_station(JustPoliceStation {
+        export::get_handle_pool(self.port_id).create_handle_policestation(JustPoliceStation {
             port_id: self.port_id,
         })
     }

@@ -14,20 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pub use super::core::generated::*;
-use std::collections::HashMap;
-use std::sync::Mutex;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 
-pub struct Context {
-    pub customer: Mutex<Option<import::Customer>>,
-    pub accounts: Mutex<HashMap<String, u64>>,
+#[derive(PartialEq)]
+pub enum TypeKind {
+    Free,
+    Exported,
+    Imported,
+    Mixed,
 }
 
-impl fml::context::Custom for Context {
-    fn new(_context: &fml::context::Config) -> Self {
-        Context {
-            customer: Mutex::new(None),
-            accounts: Mutex::new(HashMap::new()),
+pub fn traverse_type(the_type: &syn::Type) -> Result<TypeKind, TokenStream2> {
+    match the_type {
+        syn::Type::Path(p) => {
+            // TODO
+            Ok(TypeKind::Free)
         }
+        syn::Type::Tuple(t) => {
+            // TODO
+            Ok(TypeKind::Free)
+        }
+        _ => Err(TokenStream2::from(
+            syn::Error::new_spanned(the_type, format!("This type is not allowed")).to_compile_error(),
+        )),
     }
 }
