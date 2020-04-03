@@ -23,11 +23,12 @@ extern crate proc_macro2;
 
 mod helpers;
 
+use helpers::*;
+use helpers::*;
 use proc_macro::TokenStream;
 use syn::parse_macro_input;
-const MODULE_NAME: &str = "handles";
 
-use helpers::*;
+const MODULE_NAME: &str = "handles";
 
 fn fml_macro_core(args: TokenStream, input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as syn::Item);
@@ -127,12 +128,21 @@ fn fml_macro_core(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let result = quote! {
-        #handles
-        pub mod generated {
-            #dispatch
-            #export
-            #import
+    let result = if exported.is_empty() {
+        quote! {
+            #handles
+            pub mod generated {
+                #import
+            }
+        }
+    } else {
+        quote! {
+            #handles
+            pub mod generated {
+                #dispatch
+                #export
+                #import
+            }
         }
     };
     TokenStream::from(result)

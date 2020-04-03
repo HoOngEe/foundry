@@ -27,6 +27,7 @@ If you want mutablity to internal state of Handle or Global context, you should 
 5. You must not use a pattern matching on the argument. Use only single identifier.
 6. About reference... TBD
 */
+pub mod types {}
 
 #[fml_macro::fml_macro]
 pub mod handles {

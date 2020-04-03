@@ -4,12 +4,12 @@ mod tests {
     pub mod handles {
         #[exported]
         pub trait WeatherResponse {
-            fn weather(&self, date: String) -> crate::fmltest2::cleric::core::Weather;
+            fn weather(&self, date: String) -> Weather;
         }
 
         #[imported]
         pub trait WeatherForecast {
-            fn weather(&self, date: String) -> crate::fmltest2::cleric::core::Weather;
+            fn weather(&self, date: String) -> Weather;
         }
     }
 

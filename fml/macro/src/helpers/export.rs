@@ -96,6 +96,7 @@ pub fn generate_export(exported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
     let the_methods = syn::Item::Verbatim(the_methods);
     let module = quote! {
         pub mod export {
+            use super::super::types::*;
             use super::super::super::get_context;
             use super::super::handles;
             use fml::handle::pool::HandlePool;

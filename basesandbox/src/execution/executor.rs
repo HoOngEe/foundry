@@ -54,6 +54,8 @@ impl Executor for Executable {
     }
 }
 
+/// This is for the SameProcess tasks. You can register a runnable function,
+/// and it will be executed later as an instance of 'process' (which is actually not).
 pub type ThreadAsProcesss = Arc<dyn Fn(Vec<String>) -> () + Send + Sync>;
 lazy_static! {
     static ref POOL: Mutex<HashMap<String, ThreadAsProcesss>> = { Mutex::new(HashMap::new()) };
@@ -88,8 +90,7 @@ impl Executor for PlainThread {
     }
 }
 
-/// Rust doesn't allow Drop for trait, so we need this
-/// See E0120
+/// Rust doesn't allow Drop for trait, so we need this. See E0120
 struct ExecutorWrapper<T: Executor> {
     executor: T,
 }

@@ -104,6 +104,7 @@ pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
     let module = quote! {
         pub mod import {
             use super::super::super::get_context;
+            use super::super::types::*;
             #the_uses
             use fml::handle::{ImportedHandle, MethodId};
             use fml::PacketHeader;
@@ -126,6 +127,7 @@ pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
         }
         // we separte this because of `import::` appeared in return type
         pub mod import_impls {
+            use super::super::types::*;
             use super::import as import;
             #the_uses
             #the_impls

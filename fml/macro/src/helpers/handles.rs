@@ -76,6 +76,7 @@ pub fn generate_handles(
 
     let module = quote! {
         pub mod handles {
+            use super::types::*;
             pub use super::generated::{export, import};
             #the_exporteds
             #the_importeds

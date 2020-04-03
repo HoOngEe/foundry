@@ -25,6 +25,7 @@ For example, the return type is allowed to be Vec<(u8, import::SomeHandle)>
 4. You must always use &self for both imported / exported handles. (&mut self it not possible)
 If you want mutablity to internal state of Handle or Global context, you should consider Mutex.
 */
+pub mod types {}
 
 #[fml_macro::fml_macro]
 pub mod handles {

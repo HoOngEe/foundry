@@ -14,20 +14,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#[derive(Serialize, Deserialize)]
-pub enum Weather {
-    Sunny,
-    Windy,
-    Foggy,
-    Cloudy,
-    Snowy,
-    Rainy,
+pub mod types {
+    #[derive(Serialize, Deserialize)]
+    pub enum Weather {
+        Sunny,
+        Windy,
+        Foggy,
+        Cloudy,
+        Snowy,
+        Rainy,
+    }
 }
 
 #[fml_macro::fml_macro]
 pub mod handles {
     #[exported]
     pub trait WeatherForecast {
-        fn weather(&self, date: String) -> super::Weather;
+        fn weather(&self, date: String) -> Weather;
     }
 }

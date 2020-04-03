@@ -140,6 +140,7 @@ pub fn generate_dispatch(exported_handles: &[&syn::ItemTrait]) -> Result<TokenSt
 
     let module = quote! {
         pub mod dispatch {
+            use super::super::types::*;
             use super::super::handles;
             use super::export::ExportedHandles;
             use crate::fml::handle::Dispatcher;

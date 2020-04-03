@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::{
-    core::{handles::*, Weather},
+    core::{handles::*, types::Weather},
     get_context,
 };
 
