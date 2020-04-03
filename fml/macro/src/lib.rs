@@ -24,16 +24,14 @@ extern crate proc_macro2;
 mod helpers;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::parse_macro_input;
-const MODULE_NAME: &'static str = "handles";
+const MODULE_NAME: &str = "handles";
 
 use helpers::*;
 
 #[proc_macro_attribute]
 pub fn fml_macro(args: TokenStream, input: TokenStream) -> TokenStream {
-    let input_copy = input.clone(); // parse_macro_input! take only single identifier
-    let ast = parse_macro_input!(input_copy as syn::Item);
+    let ast = parse_macro_input!(input as syn::Item);
     if !args.is_empty() {
         return TokenStream::from(
             syn::Error::new_spanned(ast, "#[fml_macro] doesn't take any arguments").to_compile_error(),
@@ -130,13 +128,13 @@ pub fn fml_macro(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let result = TokenStream2::from(quote! {
+    let result = quote! {
         #handles
         pub mod generated {
             #dispatch
             #export
             #import
         }
-    });
+    };
     TokenStream::from(result)
 }

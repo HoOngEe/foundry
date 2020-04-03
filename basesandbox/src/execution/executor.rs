@@ -54,12 +54,12 @@ impl Executor for Executable {
     }
 }
 
+pub type ThreadAsProcesss = Arc<dyn Fn(Vec<String>) -> () + Send + Sync>;
 lazy_static! {
-    static ref POOL: Mutex<HashMap<String, Arc<dyn Fn(Vec<String>) -> () + Send + Sync>>> =
-        { Mutex::new(HashMap::new()) };
+    static ref POOL: Mutex<HashMap<String, ThreadAsProcesss>> = { Mutex::new(HashMap::new()) };
 }
 
-pub fn add_plain_thread_pool(key: String, f: Arc<dyn Fn(Vec<String>) -> () + Send + Sync>) {
+pub fn add_plain_thread_pool(key: String, f: ThreadAsProcesss) {
     POOL.lock().unwrap().insert(key, f);
 }
 
@@ -70,7 +70,7 @@ pub struct PlainThread {
 impl Executor for PlainThread {
     fn new(path: &str, args: &[&str]) -> Self {
         let path = path.to_owned();
-        let mut args: Vec<String> = args.iter().map(|x| x.to_string()).collect();
+        let mut args: Vec<String> = args.iter().map(|&x| x.to_string()).collect();
         args.insert(0, "Thread".to_owned()); // corresponding to program path
         let handle = std::thread::spawn(move || {
             let f = POOL.lock().unwrap().get(&path).unwrap().clone();

@@ -18,7 +18,7 @@ pub mod server;
 
 use crate::handle::{Dispatcher, HandleInstanceId, MethodId};
 use cbsb::ipc::{IpcRecv, IpcSend};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub type PortId = usize;
 
@@ -28,15 +28,9 @@ pub struct Port<D: Dispatcher> {
 }
 
 impl<D: Dispatcher + 'static> Port<D> {
-    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(
-        port_id: PortId,
-        send: S,
-        recv: R,
-        dispatcher: Arc<D>,
-    ) -> Self {
+    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(send: S, recv: R, dispatcher: Arc<D>) -> Self {
         let dispatcher_clone = dispatcher.clone();
         let server = server::Server::new(
-            port_id,
             server::ServerInternal::new(
                 8,
                 8,

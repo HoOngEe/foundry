@@ -54,18 +54,16 @@ fn generate_impl_for_a_single_trait(handle: &syn::ItemTrait) -> Result<TokenStre
                             path: path_of_single_ident(the_arg.ident.clone()),
                         }));
                     } else {
-                        return Err(TokenStream2::from(
-                            syn::Error::new_spanned(arg, format!("You must not use a pattern for the argument"))
-                                .to_compile_error(),
-                        ))
+                        return Err(syn::Error::new_spanned(arg, "You must not use a pattern for the argument")
+                            .to_compile_error())
                     }
                 }
             }
         }
 
-        let the_call = TokenStream2::from(quote! {
+        let the_call = quote! {
             super::import::call(&self.handle, #index, &#the_tuple)
-        });
+        };
         let the_call = syn::parse2::<syn::ExprCall>(the_call).unwrap();
         the_method.block.stmts.push(syn::Stmt::Expr(syn::Expr::Call(the_call)));
         the_impl.items.push(syn::ImplItem::Method(the_method));
@@ -73,12 +71,12 @@ fn generate_impl_for_a_single_trait(handle: &syn::ItemTrait) -> Result<TokenStre
     Ok(the_impl.to_token_stream())
 }
 
-pub fn generate_import(imported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenStream2, TokenStream2> {
+pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStream2, TokenStream2> {
     let mut the_uses = TokenStream2::new();
     let mut the_handles = TokenStream2::new();
     let mut the_impls = TokenStream2::new();
 
-    for (i, trait_item) in imported_handles.iter().enumerate() {
+    for trait_item in imported_handles {
         // Add a use statement for each handle trait
         let the_use = syn::parse_str::<syn::ItemUse>(&format!(
             "
@@ -103,7 +101,7 @@ pub fn generate_import(imported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenS
         the_impls.extend(generate_impl_for_a_single_trait(&trait_item));
     }
 
-    let module = TokenStream2::from(quote! {
+    let module = quote! {
         pub mod import {
             use super::super::super::get_context;
             #the_uses
@@ -132,6 +130,6 @@ pub fn generate_import(imported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenS
             #the_uses
             #the_impls
         }
-    });
+    };
     Ok(module)
 }

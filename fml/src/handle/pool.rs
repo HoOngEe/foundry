@@ -17,7 +17,11 @@
 use crate::queue::Queue;
 use std::sync::{Arc, Mutex};
 
-const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(10);
+#[cfg(debug_assertions)]
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100_000);
+#[cfg(not(debug_assertions))]
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(50);
+
 pub const NOT_DECIDED_INDEX: u16 = std::u16::MAX;
 
 // Per-trait, Per-port pool

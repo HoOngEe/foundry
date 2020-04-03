@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//use cbsb::ipc::Ipc;
-use super::PortId;
 use crate::handle::{HandleInstanceId, MethodId};
 use crate::queue::Queue;
 use cbsb::ipc::{IpcRecv, IpcSend, RecvFlag, Terminate};
@@ -29,7 +27,10 @@ type HandlerId = u32;
 type Dispatcher = dyn Fn(Cursor<&mut Vec<u8>>, HandleInstanceId, MethodId, &[u8]) + Send + Sync;
 
 const SLOT_CALL_OR_RETURN_INDICATOR: u32 = 1024 * 1024;
-const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100000);
+#[cfg(debug_assertions)]
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100_000);
+#[cfg(not(debug_assertions))]
+const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(50);
 
 // In A's view...
 // A calls another module:
@@ -79,7 +80,7 @@ fn encoding_packet_header() {
 fn ipc_sender<S: IpcSend>(queue_end: Receiver<Vec<u8>>, send: S) {
     loop {
         let data = queue_end.recv().unwrap();
-        if data.len() == 0 {
+        if data.is_empty() {
             break
         }
         if data.len() < std::mem::size_of::<PacketHeader>() {
@@ -171,7 +172,6 @@ impl ServerInternal {
 }
 
 pub fn main_routine_common1<S: IpcSend + 'static>(
-    port_id: PortId,
     server: &mut ServerInternal,
     send: S,
 ) -> (thread::JoinHandle<()>, Sender<Vec<u8>>) {
@@ -260,17 +260,10 @@ pub struct Server {
     main_thread: Option<thread::JoinHandle<()>>,
     sender_thread: Option<thread::JoinHandle<()>>,
     termiantor: Option<Box<dyn Terminate>>,
-    port_id: PortId,
 }
-
 impl Server {
-    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(
-        port_id: PortId,
-        mut server: ServerInternal,
-        send: S,
-        recv: R,
-    ) -> Self {
-        let (sender_thread, ipc_sender_sender) = main_routine_common1(port_id, &mut server, send);
+    pub fn new<S: IpcSend + 'static, R: IpcRecv + 'static>(mut server: ServerInternal, send: S, recv: R) -> Self {
+        let (sender_thread, ipc_sender_sender) = main_routine_common1(&mut server, send);
         let server2 = Arc::new(server);
         let server3 = server2.clone();
         let terminator = recv.create_terminate();
@@ -282,7 +275,6 @@ impl Server {
             main_thread: Some(main_thread),
             sender_thread: Some(sender_thread),
             termiantor: Some(Box::new(terminator)),
-            port_id,
         }
     }
 

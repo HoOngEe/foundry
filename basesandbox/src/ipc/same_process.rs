@@ -23,8 +23,9 @@ use std::sync::Mutex;
 // It will be useful when you have to simulate IPC, but the two ends don't have
 // to be actually in separated processes.
 
+type RegisteredIpcEnd = (Sender<Vec<u8>>, Receiver<Vec<u8>>);
 lazy_static! {
-    static ref POOL: Mutex<HashMap<String, (Sender<Vec<u8>>, Receiver<Vec<u8>>)>> = { Mutex::new(HashMap::new()) };
+    static ref POOL: Mutex<HashMap<String, RegisteredIpcEnd>> = { Mutex::new(HashMap::new()) };
 }
 
 pub struct SameProcessLinker {
@@ -99,7 +100,7 @@ impl IpcRecv for SameProcessRecv {
             Ok(self.0.recv().unwrap())
         }?;
 
-        if x.len() == 0 {
+        if x.is_empty() {
             return Err(RecvFlag::Termination)
         }
         Ok(x)

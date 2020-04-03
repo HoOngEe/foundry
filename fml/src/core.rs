@@ -14,14 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use crate::context::{Config, Context, Custom, PortTable};
-use crate::handle::{Dispatcher, HandlePreset, ImportedHandle, MethodId};
+use crate::context::{Context, Custom, PortTable};
+use crate::handle::{Dispatcher, HandlePreset, ImportedHandle};
 use crate::port::server::PacketHeader;
 use crate::port::Port;
-use crate::port::PortId;
-use crate::IpcBase;
 use cbsb::execution::executee;
-use cbsb::ipc::{domain_socket, same_process, InterProcessUnit, Ipc, IpcRecv, IpcSend};
+use cbsb::ipc::{domain_socket, same_process, InterProcessUnit, Ipc};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -33,22 +31,17 @@ pub fn send<I: Ipc, T: serde::Serialize>(ctx: &executee::Context<I>, data: &T) {
     ctx.ipc.as_ref().unwrap().send(&serde_cbor::to_vec(data).unwrap());
 }
 
-fn create_port<D: Dispatcher + 'static>(
-    port_id: PortId,
-    ipc_type: Vec<u8>,
-    ipc_config: Vec<u8>,
-    dispatcher: Arc<D>,
-) -> Port<D> {
+fn create_port<D: Dispatcher + 'static>(ipc_type: Vec<u8>, ipc_config: Vec<u8>, dispatcher: Arc<D>) -> Port<D> {
     let ipc_type: String = serde_cbor::from_slice(&ipc_type).unwrap();
 
     if ipc_type == "DomainSocket" {
         let ipc = domain_socket::DomainSocket::new(ipc_config);
         let (send, recv) = ipc.split();
-        Port::new(port_id, send, recv, dispatcher)
+        Port::new(send, recv, dispatcher)
     } else if ipc_type == "SameProcess" {
         let ipc = same_process::SameProcess::new(ipc_config);
         let (send, recv) = ipc.split();
-        Port::new(port_id, send, recv, dispatcher)
+        Port::new(send, recv, dispatcher)
     } else {
         panic!("Invalid port creation request");
     }
@@ -63,7 +56,7 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
 
     let config = recv(&ctx);
     let custom = C::new(&config);
-    let ports: Arc<Mutex<HashMap<PortId, (Config, Port<D>)>>> = Arc::new(Mutex::new(HashMap::new()));
+    let ports: Arc<Mutex<PortTable<D>>> = Arc::new(Mutex::new(HashMap::new()));
     let global_context = Context::new(ports.clone(), config, custom);
     context_setter(global_context);
 
@@ -72,7 +65,7 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
         if message == "link" {
             let (port_id, port_config, ipc_type, ipc_config) = recv(&ctx);
             let dispather = Arc::new(D::new(port_id, 128));
-            ports.lock().unwrap().insert(port_id, (port_config, create_port(port_id, ipc_type, ipc_config, dispather)));
+            ports.lock().unwrap().insert(port_id, (port_config, create_port(ipc_type, ipc_config, dispather)));
         } else if message == "unlink" {
             let (port_id,) = recv(&ctx);
             ports.lock().unwrap().remove(&port_id).unwrap();
@@ -99,6 +92,5 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
         }
         send(&ctx, &"done".to_owned());
     }
-
     ctx.terminate();
 }

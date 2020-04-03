@@ -33,17 +33,6 @@ pub fn get_context() -> &'static Context {
     unsafe { CONTEXT.as_ref().unwrap() }
 }
 
-pub fn main_like(args: Vec<String>) {
-    let mut preset = Preset {};
-    fml::core::<DomainSocket, MyContext, export::ExportedHandles, Preset>(
-        args,
-        &mut preset,
-        Box::new(|ctx: Context| unsafe {
-            CONTEXT.replace(ctx);
-        }),
-    );
-}
-
 pub fn main_like_test(args: Vec<String>) {
     let mut preset = Preset {};
     fml::core::<SameProcess, MyContext, export::ExportedHandles, Preset>(

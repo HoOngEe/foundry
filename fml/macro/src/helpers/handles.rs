@@ -15,8 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use super::types::{traverse_type, TypeKind};
-use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use quote::ToTokens;
 
 fn test_type(test: TypeKind, handle: &syn::ItemTrait, msg1: &str, msg2: &str) -> Result<(), TokenStream2> {
@@ -29,7 +28,7 @@ fn test_type(test: TypeKind, handle: &syn::ItemTrait, msg1: &str, msg2: &str) ->
             if let syn::FnArg::Typed(p) = arg {
                 match traverse_type(&*p.ty)? {
                     TypeKind::Free => (),
-                    _ => return Err(TokenStream2::from(syn::Error::new_spanned(arg, msg1).to_compile_error())),
+                    _ => return Err(syn::Error::new_spanned(arg, msg1).to_compile_error()),
                 }
             }
         }
@@ -37,7 +36,7 @@ fn test_type(test: TypeKind, handle: &syn::ItemTrait, msg1: &str, msg2: &str) ->
         if let syn::ReturnType::Type(_, t) = &method.sig.output {
             let traverse_result = traverse_type(t)?;
             if traverse_result != test && traverse_result != TypeKind::Free {
-                return Err(TokenStream2::from(syn::Error::new_spanned(&method.sig.output, msg2).to_compile_error()))
+                return Err(syn::Error::new_spanned(&method.sig.output, msg2).to_compile_error())
             }
         }
     }
@@ -45,8 +44,8 @@ fn test_type(test: TypeKind, handle: &syn::ItemTrait, msg1: &str, msg2: &str) ->
 }
 
 pub fn generate_handles(
-    exported_handles: &Vec<&syn::ItemTrait>,
-    imported_handles: &Vec<&syn::ItemTrait>,
+    exported_handles: &[&syn::ItemTrait],
+    imported_handles: &[&syn::ItemTrait],
 ) -> Result<TokenStream2, TokenStream2> {
     let mut the_exporteds = TokenStream2::new();
     let mut the_importeds = TokenStream2::new();
@@ -75,12 +74,12 @@ pub fn generate_handles(
         the_importeds.extend(the_trait.to_token_stream());
     }
 
-    let module = TokenStream2::from(quote! {
+    let module = quote! {
         pub mod handles {
             pub use super::generated::{export, import};
             #the_exporteds
             #the_importeds
         }
-    });
+    };
     Ok(module)
 }

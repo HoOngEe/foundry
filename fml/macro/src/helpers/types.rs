@@ -14,28 +14,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use proc_macro2::{Span, TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 
 #[derive(PartialEq)]
 pub enum TypeKind {
     Free,
     Exported,
     Imported,
-    Mixed,
+    _Mixed,
 }
 
 pub fn traverse_type(the_type: &syn::Type) -> Result<TypeKind, TokenStream2> {
     match the_type {
-        syn::Type::Path(p) => {
+        syn::Type::Path(_) => {
             // TODO
             Ok(TypeKind::Free)
         }
-        syn::Type::Tuple(t) => {
+        syn::Type::Tuple(_) => {
             // TODO
             Ok(TypeKind::Free)
         }
-        _ => Err(TokenStream2::from(
-            syn::Error::new_spanned(the_type, format!("This type is not allowed")).to_compile_error(),
-        )),
+        _ => Err(syn::Error::new_spanned(the_type, "This type is not allowed").to_compile_error()),
     }
 }

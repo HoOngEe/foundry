@@ -20,10 +20,11 @@ use quote::ToTokens;
 
 fn generate_dispatch_for_a_single_trait(
     trait_name: &str,
-    methods: Vec<&syn::TraitItemMethod>,
+    methods: &[&syn::TraitItemMethod],
     num: u32,
 ) -> Result<TokenStream2, TokenStream2> {
-    let mut function = syn::parse_str::<syn::ItemFn>(&format!("
+    let mut function = syn::parse_str::<syn::ItemFn>(&format!(
+        "
     #[allow(clippy::let_unit_value)]
     fn dispatch_{}(
         mut buffer: Cursor<&mut Vec<u8>>,
@@ -31,17 +32,18 @@ fn generate_dispatch_for_a_single_trait(
         method: MethodId,
         data: &[u8],
     ) {{}}
-    ",num + 1,trait_name
-    )).unwrap();
+    ",
+        num + 1,
+        trait_name
+    ))
+    .unwrap();
 
     let mut the_match = syn::parse_str::<syn::ExprMatch>("match method {}").unwrap();
 
     // Make a match arm for each handle's method
     for (i, m) in methods.iter().enumerate() {
         if let syn::FnArg::Typed(_) = m.sig.inputs[0] {
-            return Err(TokenStream2::from(
-                syn::Error::new_spanned(m, format!("All methods must have &self")).to_compile_error(),
-            ))
+            return Err(syn::Error::new_spanned(m, "All methods must have &self").to_compile_error())
         }
 
         // statement #1
@@ -60,9 +62,9 @@ fn generate_dispatch_for_a_single_trait(
                 subpat: None,
             }));
         }
-        let stmt_deserialize = TokenStream2::from(quote! {
+        let stmt_deserialize = quote! {
             let #the_let_pattern = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
-        });
+        };
 
         // statement #2
         let mut the_args: syn::punctuated::Punctuated<syn::Expr, syn::token::Comma> =
@@ -76,20 +78,19 @@ fn generate_dispatch_for_a_single_trait(
             }));
         }
         let method_name = m.sig.ident.clone();
-        let stmt_call = TokenStream2::from(quote! {
+        let stmt_call = quote! {
             let result = object.#method_name(#the_args);
-        });
+        };
 
         let index = syn::Lit::Int(syn::LitInt::new(&format!("{}", i + 1), Span::call_site()));
-        let the_arm = TokenStream2::from(quote! {
+        let the_arm = quote! {
             #index => {
                 #stmt_deserialize
                 #stmt_call
                 serde_cbor::to_writer(&mut buffer, &result).unwrap();
             }
-        });
-        let mut the_arm = syn::parse2::<syn::Arm>(the_arm).unwrap();
-        the_match.arms.push(the_arm);
+        };
+        the_match.arms.push(syn::parse2::<syn::Arm>(the_arm).unwrap());
     }
 
     the_match.arms.push(syn::parse_str("_ => panic!()").unwrap());
@@ -97,9 +98,9 @@ fn generate_dispatch_for_a_single_trait(
     Ok(function.to_token_stream())
 }
 
-pub fn generate_dispatch(exported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenStream2, TokenStream2> {
+pub fn generate_dispatch(exported_handles: &[&syn::ItemTrait]) -> Result<TokenStream2, TokenStream2> {
     let mut the_match = syn::parse_str::<syn::ExprMatch>("match handle.trait_id {}").unwrap();
-    for (i, h) in exported_handles.iter().enumerate() {
+    for i in 0..exported_handles.len() {
         let code = format!(
             "{} => {{
             dispatch_{}(buffer, self.handles_trait{}.get(handle.index as usize), method, data);
@@ -133,11 +134,11 @@ pub fn generate_dispatch(exported_handles: &Vec<&syn::ItemTrait>) -> Result<Toke
                 }
             })
             .collect();
-        dispatch.extend(generate_dispatch_for_a_single_trait(&format!("{}", source_trait.ident), methods, i as u32)?);
+        dispatch.extend(generate_dispatch_for_a_single_trait(&format!("{}", source_trait.ident), &methods, i as u32)?);
     }
     let result = syn::Item::Verbatim(dispatch);
 
-    let module = TokenStream2::from(quote! {
+    let module = quote! {
         pub mod dispatch {
             use super::super::handles;
             use super::export::ExportedHandles;
@@ -166,8 +167,7 @@ pub fn generate_dispatch(exported_handles: &Vec<&syn::ItemTrait>) -> Result<Toke
                     #the_match
                 }
             }
-
         }
-    });
+    };
     Ok(module)
 }

@@ -14,16 +14,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-/*
 use super::*;
 use nix::errno::Errno;
 use nix::libc;
-use std::collections::hash_map::HashMap;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum Mode {
     CREATE,
     OPEN,
+}
+
+pub struct SemaphoreLinker {
+    address_server: String,
+    address_client: String,
+}
+
+impl TwoWayInitialize for SemaphoreLinker {
+    type Server = Semaphore;
+    type Client = Semaphore;
+
+    fn new(_name: String) -> Self {
+        // Semaphore path stands for a virtual path, so must start with '/'
+        let address_server = format!("/{}", generate_random_name());
+        let address_client = format!("/{}", generate_random_name());
+        SemaphoreLinker {
+            address_server,
+            address_client,
+        }
+    }
+
+    fn create(&self) -> (Vec<u8>, Vec<u8>) {
+        (
+            serde_cbor::to_vec(&(&self.address_server, &self.address_client)).unwrap(),
+            serde_cbor::to_vec(&(&self.address_client, &self.address_server)).unwrap(),
+        )
+    }
 }
 
 /// Inter-process semaphore using POSIX
@@ -98,15 +123,3 @@ impl Drop for Semaphore {
         }
     }
 }
-
-impl TwoWayInitialize for Semaphore {
-
-    fn create(config: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
-        let config: HashMap<String, String> = serde_cbor::from_slice(&config).unwrap();
-        let path = config.get("path").unwrap();
-        let address = format!("{}{}", path, generate_random_name());
-
-        (serde_cbor::to_vec(&(address.clone(), 1)).unwrap(), serde_cbor::to_vec(&(address, 2)).unwrap())
-    }
-}
-*/

@@ -30,12 +30,11 @@ impl Customer for JustCustomer {
         get_context().custom.customers.lock().unwrap().get_mut(&name).unwrap().1.push(record);
     }
 
-    fn reform(&self, name: String) -> bool {
+    fn reform(&self, _name: String) -> bool {
         true
     }
 
-    fn provoke(&self, name: String) -> export::Customer {
-        let ctx = get_context();
+    fn provoke(&self, _name: String) -> export::Customer {
         export::get_handle_pool(self.port_id).create_handle_customer(DangerousCustomer {
             port_id: self.port_id,
             psychopath: true,
@@ -66,8 +65,7 @@ impl Customer for DangerousCustomer {
         true
     }
 
-    fn provoke(&self, name: String) -> export::Customer {
-        let ctx = get_context();
+    fn provoke(&self, _name: String) -> export::Customer {
         export::get_handle_pool(self.port_id).create_handle_customer(DangerousCustomer {
             port_id: self.port_id,
             psychopath: true,

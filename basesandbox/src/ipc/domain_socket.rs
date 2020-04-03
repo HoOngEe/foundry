@@ -62,7 +62,6 @@ impl Drop for SocketInternal {
 }
 
 pub struct DomainSocketSend {
-    address_src: String,
     address_dst: String,
     socket: Arc<SocketInternal>,
 }
@@ -74,7 +73,6 @@ impl IpcSend for DomainSocketSend {
 }
 
 pub struct DomainSocketRecv {
-    address_src: String,
     address_dst: String,
     socket: Arc<SocketInternal>,
     buffer: RefCell<Vec<u8>>,
@@ -122,12 +120,10 @@ impl InterProcessUnit for DomainSocket {
         let socket = Arc::new(SocketInternal(UnixDatagram::bind(&address_src).unwrap()));
         DomainSocket {
             send: DomainSocketSend {
-                address_src: address_src.clone(),
                 address_dst: address_dst.clone(),
                 socket: socket.clone(),
             },
             recv: DomainSocketRecv {
-                address_src,
                 address_dst,
                 socket,
                 buffer: RefCell::new(vec![0; 1024]),

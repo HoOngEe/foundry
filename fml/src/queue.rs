@@ -38,9 +38,9 @@ impl<T> Queue<T> {
 
     pub fn pop(&self, timeout: Option<std::time::Duration>) -> Result<T, ()> {
         if let Some(duration) = timeout {
-            return self.recver.lock().unwrap().recv_timeout(duration).map_err(|_| ())
+            self.recver.lock().unwrap().recv_timeout(duration).map_err(|_| ())
         } else {
-            return self.recver.lock().unwrap().recv().map_err(|_| ())
+            self.recver.lock().unwrap().recv().map_err(|_| ())
         }
     }
 }

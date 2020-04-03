@@ -17,7 +17,7 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
 
-pub fn generate_export(exported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenStream2, TokenStream2> {
+pub fn generate_export(exported_handles: &[&syn::ItemTrait]) -> Result<TokenStream2, TokenStream2> {
     let mut the_handles = TokenStream2::new();
     let mut the_exported_handles = syn::parse_str::<syn::ItemStruct>(
         "
@@ -94,7 +94,7 @@ pub fn generate_export(exported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenS
     }
     let the_handles = syn::Item::Verbatim(the_handles);
     let the_methods = syn::Item::Verbatim(the_methods);
-    let module = TokenStream2::from(quote! {
+    let module = quote! {
         pub mod export {
             use super::super::super::get_context;
             use super::super::handles;
@@ -115,6 +115,6 @@ pub fn generate_export(exported_handles: &Vec<&syn::ItemTrait>) -> Result<TokenS
             }
 
         }
-    });
+    };
     Ok(module)
 }
