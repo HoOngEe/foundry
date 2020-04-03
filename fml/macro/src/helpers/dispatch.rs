@@ -61,6 +61,7 @@ fn generate_dispatch_for_a_single_trait(
                 ident: the_iden,
                 subpat: None,
             }));
+            the_let_pattern.elems.push_punct(syn::token::Comma(Span::call_site()))
         }
         let stmt_deserialize = quote! {
             let #the_let_pattern = serde_cbor::from_reader(&data[std::mem::size_of::<PacketHeader>()..]).unwrap();
