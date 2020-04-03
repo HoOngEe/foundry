@@ -100,20 +100,25 @@ fn generate_dispatch_for_a_single_trait(
 }
 
 pub fn generate_dispatch(exported_handles: &[&syn::ItemTrait]) -> Result<TokenStream2, TokenStream2> {
-    let mut the_match = syn::parse_str::<syn::ExprMatch>("match handle.trait_id {}").unwrap();
-    for i in 0..exported_handles.len() {
-        let code = format!(
-            "{} => {{
+    let the_trait_match = if !exported_handles.is_empty() {
+        let mut the_match = syn::parse_str::<syn::ExprMatch>("match handle.trait_id {}").unwrap();
+        for i in 0..exported_handles.len() {
+            let code = format!(
+                "{} => {{
             dispatch_{}(buffer, self.handles_trait{}.get(handle.index as usize), method, data);
         }}",
-            i + 1,
-            i + 1,
-            i + 1
-        );
-        let the_arm = syn::parse_str::<syn::Arm>(&code).unwrap();
-        the_match.arms.push(the_arm);
-        the_match.arms.push(syn::parse_str("_ => panic!()").unwrap());
-    }
+                i + 1,
+                i + 1,
+                i + 1
+            );
+            let the_arm = syn::parse_str::<syn::Arm>(&code).unwrap();
+            the_match.arms.push(the_arm);
+            the_match.arms.push(syn::parse_str("_ => panic!()").unwrap());
+        }
+        syn::Expr::Match(the_match)
+    } else {
+        syn::parse_str("panic!(\"Dispatch has been invoked for a non-exporting module\")").unwrap()
+    };
 
     let mut the_struct = syn::parse_str::<syn::ExprStruct>("ExportedHandles {port_id,}").unwrap();
     for i in 0..exported_handles.len() {
@@ -166,7 +171,7 @@ pub fn generate_dispatch(exported_handles: &[&syn::ItemTrait]) -> Result<TokenSt
                     method: MethodId,
                     data: &[u8],
                 ) {
-                    #the_match
+                    #the_trait_match
                 }
             }
         }

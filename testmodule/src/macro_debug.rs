@@ -3,12 +3,12 @@ mod tests {
     #[fml_macro::fml_macro_debug]
     pub mod handles {
         #[exported]
-        pub trait WeatherResponse {
+        pub trait WeatherRequest {
             fn weather(&self, date: String) -> Weather;
         }
 
         #[imported]
-        pub trait WeatherForecast {
+        pub trait WeatherResponse {
             fn weather(&self, date: String) -> Weather;
         }
     }

@@ -128,21 +128,12 @@ fn fml_macro_core(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
-    let result = if exported.is_empty() {
-        quote! {
-            #handles
-            pub mod generated {
-                #import
-            }
-        }
-    } else {
-        quote! {
-            #handles
-            pub mod generated {
-                #dispatch
-                #export
-                #import
-            }
+    let result = quote! {
+        #handles
+        pub mod generated {
+            #dispatch
+            #export
+            #import
         }
     };
     TokenStream::from(result)

@@ -109,7 +109,7 @@ pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
             use fml::handle::{ImportedHandle, MethodId};
             use fml::PacketHeader;
             use serde::{Deserialize, Serialize};
-
+            use std::io::Cursor;
             pub fn call<T: serde::Serialize, R: serde::de::DeserializeOwned>(
                 handle: &ImportedHandle,
                 method: MethodId,
@@ -117,7 +117,11 @@ pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
             ) -> R {
                 let mut buffer: Vec<u8> = Vec::new();
                 buffer.resize(std::mem::size_of::<PacketHeader>(), 0 as u8);
-                serde_cbor::to_writer(&mut buffer[std::mem::size_of::<PacketHeader>()..], &args).unwrap();
+                serde_cbor::to_writer({
+                    let mut c = Cursor::new(&mut buffer);
+                    c.set_position(std::mem::size_of::<PacketHeader>() as u64);
+                    c
+                }, &args).unwrap();
                 let result =
                     get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().1.call(handle.id, method, buffer);
                 serde_cbor::from_reader(&result[std::mem::size_of::<PacketHeader>()..]).unwrap()
