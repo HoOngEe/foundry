@@ -16,6 +16,7 @@
 
 mod cleric;
 mod god;
+mod host;
 mod human;
 
 use cbsb::execution::executor;
@@ -68,10 +69,12 @@ pub fn run() {
     executor::add_plain_thread_pool("human".to_owned(), Arc::new(human::main_like_test));
     executor::add_plain_thread_pool("cleric".to_owned(), Arc::new(cleric::main_like_test));
     executor::add_plain_thread_pool("god".to_owned(), Arc::new(god::main_like_test));
+    executor::add_plain_thread_pool("host".to_owned(), Arc::new(host::main_like_test));
 
     let ctx_human = create_context_with_name("human");
     let ctx_cleric = create_context_with_name("cleric");
     let ctx_god = create_context_with_name("god");
+    let ctx_host = create_context_with_name("host");
 
     let config_human = Config {
         kind: "human".to_owned(),
@@ -94,17 +97,41 @@ pub fn run() {
         args: b"Arg 3".to_vec(),
     };
 
+    let config_host = Config {
+        kind: "host".to_owned(),
+        id: "ID 4".to_owned(),
+        key: "Key 4".to_owned(),
+        args: b"Arg 4".to_vec(),
+    };
+
     let port_id_1 = 1 as usize; // This is the id in its own port list, so 1 for both.
     let port_id_2 = 2 as usize;
 
     send(&ctx_human, &config_human);
     send(&ctx_cleric, &config_cleric);
     send(&ctx_god, &config_god);
+    send(&ctx_host, &config_host);
 
     let linker1 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
     let linker2 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
+    let linker3 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
     let (ipc_config_human_cleric, ipc_config_cleric_human) = linker1.create();
     let (ipc_config_cleric_god, ipc_config_god_cleric) = linker2.create();
+    let (ipc_config_host_human, ipc_config_human_host) = linker3.create();
+
+    send(&ctx_host, &"link");
+    send(
+        &ctx_host,
+        &(port_id_2, config_human.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_host_human),
+    );
+    done_ack(&ctx_host);
+
+    send(&ctx_human, &"link");
+    send(
+        &ctx_human,
+        &(port_id_2, config_host, serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_human_host),
+    );
+    done_ack(&ctx_human);
 
     send(&ctx_human, &"link");
     send(
@@ -126,7 +153,7 @@ pub fn run() {
     done_ack(&ctx_god);
 
     send(&ctx_human, &"handle_export");
-    send(&ctx_human, &(port_id_1,));
+    send(&ctx_human, &(port_id_2,));
     let handle_from_human: ImportedHandle = recv(&ctx_human);
     done_ack(&ctx_human);
 
@@ -148,20 +175,26 @@ pub fn run() {
     send(&ctx_cleric, &(handle_from_god,));
     done_ack(&ctx_cleric);
 
-    send(&ctx_human, &"call");
-    send(&ctx_human, &(handle_from_human, 1 as u32, serde_cbor::to_vec(&("A",)).unwrap()));
-    let buffer: Vec<u8> = recv(&ctx_human);
+    send(&ctx_host, &"handle_import");
+    send(&ctx_host, &(handle_from_human,));
+    done_ack(&ctx_host);
+
+    send(&ctx_host, &"call");
+    send(&ctx_host, &(handle_from_human, 1 as u32, serde_cbor::to_vec(&("A",)).unwrap()));
+    let buffer: Vec<u8> = recv(&ctx_host);
     let result: Weather = serde_cbor::from_slice(&buffer).unwrap();
     assert_eq!(result, Weather::Cloudy);
-    done_ack(&ctx_human);
+    done_ack(&ctx_host);
 
     send(&ctx_human, &"terminate");
     send(&ctx_cleric, &"terminate");
     send(&ctx_god, &"terminate");
+    send(&ctx_host, &"terminate");
 
     ctx_human.terminate();
     ctx_cleric.terminate();
     ctx_god.terminate();
+    ctx_host.terminate();
 }
 
 #[cfg(test)]

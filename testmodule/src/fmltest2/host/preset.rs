@@ -22,25 +22,19 @@ pub struct Preset {}
 
 impl HandlePreset for Preset {
     fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
-        let port_table = get_context().ports.lock().unwrap();
-        let (config, port) = port_table.get(&port_id).unwrap();
-        if config.kind == "host" || config.kind == "cleric" {
-            let bank = port.dispatcher_get().create_handle_weatherrequest(impls::WeatherForecaster {});
-            return Ok(bank.handle)
-        }
-        Err("Nothing to export to this kind of module".to_owned())
+        Err("Nothing to export".to_owned())
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
         let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
-        if kind != "cleric" {
+        if kind != "human" {
             panic!("Invalid handle import")
         }
-        let weather_response = &mut get_context().custom.weather_response.lock().unwrap();
-        if weather_response.is_some() {
+        let weather = &mut get_context().custom.weather.lock().unwrap();
+        if weather.is_some() {
             return Err("Handle already imported".to_owned())
         }
-        **weather_response = Some(import::WeatherResponse {
+        **weather = Some(import::WeatherRequest {
             handle,
         });
         Ok(())
