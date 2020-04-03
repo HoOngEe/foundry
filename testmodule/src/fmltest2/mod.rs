@@ -19,9 +19,9 @@ mod god;
 mod host;
 mod human;
 
-use cbsb::execution::executor;
+use cbsb::execution::executor::{add_plain_thread_pool, execute, Context, PlainThread, ThreadAsProcesss};
 use cbsb::ipc;
-use cbsb::ipc::same_process::SameProcess;
+use cbsb::ipc::same_process::{SameProcess, SameProcessLinker};
 use cbsb::ipc::{TwoWayInitializableIpc, TwoWayInitialize};
 use fml::context::Config;
 use fml::handle::ImportedHandle;
@@ -29,20 +29,15 @@ use std::sync::Arc;
 
 const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100000);
 
-pub fn recv<I: ipc::TwoWayInitializableIpc, T: serde::de::DeserializeOwned>(
-    ctx: &executor::Context<I, executor::PlainThread>,
-) -> T {
+pub fn recv<I: ipc::TwoWayInitializableIpc, T: serde::de::DeserializeOwned>(ctx: &Context<I, PlainThread>) -> T {
     serde_cbor::from_slice(&ctx.ipc.recv(Some(TIMEOUT)).unwrap()).unwrap()
 }
 
-pub fn send<I: ipc::TwoWayInitializableIpc, T: serde::Serialize>(
-    ctx: &executor::Context<I, executor::PlainThread>,
-    data: &T,
-) {
+pub fn send<I: ipc::TwoWayInitializableIpc, T: serde::Serialize>(ctx: &Context<I, PlainThread>, data: &T) {
     ctx.ipc.send(&serde_cbor::to_vec(data).unwrap());
 }
 
-pub fn done_ack<I: ipc::TwoWayInitializableIpc>(ctx: &executor::Context<I, executor::PlainThread>) {
+pub fn done_ack<I: ipc::TwoWayInitializableIpc>(ctx: &Context<I, PlainThread>) {
     // Rust doesn't support type ascription yet.
     assert_eq!(
         {
@@ -52,6 +47,8 @@ pub fn done_ack<I: ipc::TwoWayInitializableIpc>(ctx: &executor::Context<I, execu
         "done"
     );
 }
+
+type TestContext = Context<SameProcess, PlainThread>;
 
 #[derive(Debug, PartialEq, Eq, Deserialize)]
 pub enum Weather {
@@ -63,138 +60,150 @@ pub enum Weather {
     Rainy,
 }
 
-pub fn run() {
-    let create_context_with_name = |path: &str| executor::execute::<SameProcess, executor::PlainThread>(path).unwrap();
+#[inline]
+fn create_config_with_module_name(module_name: &str) -> Config {
+    Config {
+        kind: String::from(module_name),
+        id: String::from("ID") + module_name,
+        key: String::from("KEY") + module_name,
+        args: (String::from("ARG") + module_name).into_bytes(),
+    }
+}
 
-    executor::add_plain_thread_pool("human".to_owned(), Arc::new(human::main_like_test));
-    executor::add_plain_thread_pool("cleric".to_owned(), Arc::new(cleric::main_like_test));
-    executor::add_plain_thread_pool("god".to_owned(), Arc::new(god::main_like_test));
-    executor::add_plain_thread_pool("host".to_owned(), Arc::new(host::main_like_test));
+#[inline]
+fn create_context_with_name(path: &str) -> TestContext {
+    execute::<SameProcess, PlainThread>(path).unwrap()
+}
 
-    let ctx_human = create_context_with_name("human");
-    let ctx_cleric = create_context_with_name("cleric");
-    let ctx_god = create_context_with_name("god");
-    let ctx_host = create_context_with_name("host");
+#[inline]
+fn string_with_prefix(prefix: &str, target: &str) -> String {
+    String::from(prefix) + target
+}
 
-    let config_human = Config {
-        kind: "human".to_owned(),
-        id: "ID 1".to_owned(),
-        key: "Key 1".to_owned(),
-        args: b"Arg 1".to_vec(),
+fn initialize_module(module_name: &str, module_process: ThreadAsProcesss) -> (TestContext, Config) {
+    add_plain_thread_pool(String::from(module_name), module_process);
+    let ctx_module = create_context_with_name(module_name);
+    let config_module = create_config_with_module_name(module_name);
+    send(&ctx_module, &config_module);
+    (ctx_module, config_module)
+}
+
+macro_rules! create_ctx_and_config {
+    (($ctx_name:ident, $ctx_config:ident, $module_name:literal, $process:expr)) => {
+        let ($ctx_name, $ctx_config) = initialize_module($module_name, Arc::new($process));
     };
-
-    let config_cleric = Config {
-        kind: "cleric".to_owned(),
-        id: "ID 2".to_owned(),
-        key: "Key 2".to_owned(),
-        args: b"Arg 2".to_vec(),
+    // recursion
+    ($head:tt, $($tail:tt),* $(,)?) => {
+        create_ctx_and_config!($head);
+        $(
+            create_ctx_and_config!($tail);
+        )*
     };
+}
 
-    let config_god = Config {
-        kind: "god".to_owned(),
-        id: "ID 3".to_owned(),
-        key: "Key 3".to_owned(),
-        args: b"Arg 3".to_vec(),
-    };
+#[inline]
+fn create_same_process_linker() -> SameProcessLinker {
+    <SameProcess as TwoWayInitializableIpc>::Linker::new(String::from("BaseSandbox"))
+}
 
-    let config_host = Config {
-        kind: "host".to_owned(),
-        id: "ID 4".to_owned(),
-        key: "Key 4".to_owned(),
-        args: b"Arg 4".to_vec(),
-    };
+fn link_two_modules_through_port(
+    module1: (&TestContext, &Config),
+    module2: (&TestContext, &Config),
+    port_id: usize,
+    end_points: (Vec<u8>, Vec<u8>),
+) {
+    let (ipc_endpoint1, ipc_endpoint2) = end_points;
+    let (ctx1, config1) = module1;
+    let (ctx2, config2) = module2;
+    send(ctx1, &"link");
+    send(ctx1, &(port_id, config2.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_endpoint1));
+    done_ack(ctx1);
 
-    let port_id_1 = 1 as usize; // This is the id in its own port list, so 1 for both.
-    let port_id_2 = 2 as usize;
+    send(ctx2, &"link");
+    send(ctx2, &(port_id, config1.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_endpoint2));
+    done_ack(ctx2);
+}
 
-    send(&ctx_human, &config_human);
-    send(&ctx_cleric, &config_cleric);
-    send(&ctx_god, &config_god);
-    send(&ctx_host, &config_host);
+fn export_handle_from_module_port(ctx: &TestContext, port_id: usize) -> ImportedHandle {
+    send(ctx, &"handle_export");
+    send(ctx, &(port_id,));
+    let handle: ImportedHandle = recv(ctx);
+    done_ack(ctx);
+    handle
+}
 
-    let linker1 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
-    let linker2 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
-    let linker3 = <SameProcess as TwoWayInitializableIpc>::Linker::new("BaseSandbox".to_owned());
-    let (ipc_config_human_cleric, ipc_config_cleric_human) = linker1.create();
-    let (ipc_config_cleric_god, ipc_config_god_cleric) = linker2.create();
-    let (ipc_config_host_human, ipc_config_human_host) = linker3.create();
+fn import_handle_to_module(ctx: &TestContext, handle: ImportedHandle) {
+    send(ctx, &"handle_import");
+    send(ctx, &(handle,));
+    done_ack(ctx);
+}
 
-    send(&ctx_host, &"link");
-    send(
-        &ctx_host,
-        &(port_id_2, config_human.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_host_human),
+fn terminate_modules(ctxs: Vec<TestContext>) {
+    ctxs.into_iter().for_each(|ctx| {
+        send(&ctx, &"terminate");
+        ctx.terminate();
+    });
+}
+
+fn call_module_function<'a, T: serde::de::DeserializeOwned>(
+    ctx: &TestContext,
+    handle: ImportedHandle,
+    method_idx: u32,
+    args: Vec<u8>,
+) -> T {
+    send(&ctx, &"call");
+    send(&ctx, &(handle, method_idx, args));
+    let buffer: Vec<u8> = recv(&ctx);
+    let result: T = serde_cbor::from_slice(&buffer).unwrap();
+    done_ack(&ctx);
+    result
+}
+
+pub fn run_for_weather() {
+    create_ctx_and_config!(
+        (ctx_human, config_human, "human", human::main_like_test),
+        (ctx_host, config_host, "host", host::main_like_test),
+        (ctx_cleric, config_cleric, "cleric", cleric::main_like_test),
+        (ctx_god, config_god, "god", god::main_like_test)
     );
-    done_ack(&ctx_host);
 
-    send(&ctx_human, &"link");
-    send(
-        &ctx_human,
-        &(port_id_2, config_host, serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_human_host),
+    // linkers should live long
+    let linker_host_human = create_same_process_linker();
+    let linker_human_cleric = create_same_process_linker();
+    let linker_cleric_god = create_same_process_linker();
+
+    link_two_modules_through_port(
+        (&ctx_host, &config_host),
+        (&ctx_human, &config_human),
+        1,
+        linker_host_human.create(),
     );
-    done_ack(&ctx_human);
-
-    send(&ctx_human, &"link");
-    send(
-        &ctx_human,
-        &(port_id_1, config_cleric.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_human_cleric),
+    link_two_modules_through_port(
+        (&ctx_human, &config_human),
+        (&ctx_cleric, &config_cleric),
+        2,
+        linker_human_cleric.create(),
     );
-    done_ack(&ctx_human);
+    link_two_modules_through_port(
+        (&ctx_cleric, &config_cleric),
+        (&ctx_god, &config_god),
+        1,
+        linker_cleric_god.create(),
+    );
 
-    send(&ctx_cleric, &"link");
-    send(&ctx_cleric, &(port_id_1, config_human, serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_cleric_human));
-    done_ack(&ctx_cleric);
+    let weather_request_handle = export_handle_from_module_port(&ctx_human, 1);
+    let weather_response_handle = export_handle_from_module_port(&ctx_cleric, 2);
+    let weather_forecast_handle = export_handle_from_module_port(&ctx_god, 1);
 
-    send(&ctx_cleric, &"link");
-    send(&ctx_cleric, &(port_id_2, config_god, serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_cleric_god));
-    done_ack(&ctx_cleric);
+    import_handle_to_module(&ctx_host, weather_request_handle);
+    import_handle_to_module(&ctx_human, weather_response_handle);
+    import_handle_to_module(&ctx_cleric, weather_forecast_handle);
 
-    send(&ctx_god, &"link");
-    send(&ctx_god, &(port_id_2, config_cleric, serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_god_cleric));
-    done_ack(&ctx_god);
+    let weather_request_arg = serde_cbor::to_vec(&("A",)).unwrap();
+    let weather: Weather = call_module_function(&ctx_host, weather_request_handle, 1, weather_request_arg);
+    assert_eq!(weather, Weather::Rainy);
 
-    send(&ctx_human, &"handle_export");
-    send(&ctx_human, &(port_id_2,));
-    let handle_from_human: ImportedHandle = recv(&ctx_human);
-    done_ack(&ctx_human);
-
-    send(&ctx_cleric, &"handle_export");
-    send(&ctx_cleric, &(port_id_1,));
-    let handle_from_cleric: ImportedHandle = recv(&ctx_cleric);
-    done_ack(&ctx_cleric);
-
-    send(&ctx_god, &"handle_export");
-    send(&ctx_god, &(port_id_2,));
-    let handle_from_god: ImportedHandle = recv(&ctx_god);
-    done_ack(&ctx_god);
-
-    send(&ctx_human, &"handle_import");
-    send(&ctx_human, &(handle_from_cleric,));
-    done_ack(&ctx_human);
-
-    send(&ctx_cleric, &"handle_import");
-    send(&ctx_cleric, &(handle_from_god,));
-    done_ack(&ctx_cleric);
-
-    send(&ctx_host, &"handle_import");
-    send(&ctx_host, &(handle_from_human,));
-    done_ack(&ctx_host);
-
-    send(&ctx_host, &"call");
-    send(&ctx_host, &(handle_from_human, 1 as u32, serde_cbor::to_vec(&("A",)).unwrap()));
-    let buffer: Vec<u8> = recv(&ctx_host);
-    let result: Weather = serde_cbor::from_slice(&buffer).unwrap();
-    assert_eq!(result, Weather::Cloudy);
-    done_ack(&ctx_host);
-
-    send(&ctx_human, &"terminate");
-    send(&ctx_cleric, &"terminate");
-    send(&ctx_god, &"terminate");
-    send(&ctx_host, &"terminate");
-
-    ctx_human.terminate();
-    ctx_cleric.terminate();
-    ctx_god.terminate();
-    ctx_host.terminate();
+    terminate_modules(vec![ctx_human, ctx_host, ctx_cleric, ctx_god]);
 }
 
 #[cfg(test)]
@@ -203,6 +212,6 @@ mod tests {
 
     #[test]
     fn fmltest2_simple() {
-        run();
+        run_for_weather();
     }
 }
