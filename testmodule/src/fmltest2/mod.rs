@@ -63,9 +63,7 @@ pub enum Weather {
 }
 
 pub fn run() {
-    let create_context_with_name = |path: &str|  {
-        executor::execute::<SameProcess, executor::PlainThread>(path).unwrap()
-    };
+    let create_context_with_name = |path: &str| executor::execute::<SameProcess, executor::PlainThread>(path).unwrap();
 
     executor::add_plain_thread_pool("human".to_owned(), Arc::new(human::main_like_test));
     executor::add_plain_thread_pool("cleric".to_owned(), Arc::new(cleric::main_like_test));
@@ -109,7 +107,10 @@ pub fn run() {
     let (ipc_config_cleric_god, ipc_config_god_cleric) = linker2.create();
 
     send(&ctx_human, &"link");
-    send(&ctx_human, &(port_id_1, config_cleric.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_human_cleric));
+    send(
+        &ctx_human,
+        &(port_id_1, config_cleric.clone(), serde_cbor::to_vec(&"SameProcess").unwrap(), ipc_config_human_cleric),
+    );
     done_ack(&ctx_human);
 
     send(&ctx_cleric, &"link");

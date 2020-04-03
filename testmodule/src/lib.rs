@@ -25,5 +25,6 @@ extern crate serde_derive;
 
 mod fmltest1;
 mod fmltest2;
+mod macro_debug;
 
 pub use fmltest1::run;

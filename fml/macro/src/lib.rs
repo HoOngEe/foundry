@@ -29,8 +29,7 @@ const MODULE_NAME: &str = "handles";
 
 use helpers::*;
 
-#[proc_macro_attribute]
-pub fn fml_macro(args: TokenStream, input: TokenStream) -> TokenStream {
+fn fml_macro_core(args: TokenStream, input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as syn::Item);
     if !args.is_empty() {
         return TokenStream::from(
@@ -137,4 +136,15 @@ pub fn fml_macro(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
     TokenStream::from(result)
+}
+
+#[proc_macro_attribute]
+pub fn fml_macro(args: TokenStream, input: TokenStream) -> TokenStream {
+    fml_macro_core(args, input)
+}
+
+#[proc_macro_attribute]
+pub fn fml_macro_debug(args: TokenStream, input: TokenStream) -> TokenStream {
+    println!("{}", fml_macro_core(args, input));
+    TokenStream::new()
 }

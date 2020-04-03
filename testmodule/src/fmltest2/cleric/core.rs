@@ -28,7 +28,7 @@ pub enum Weather {
 pub mod handles {
     #[exported]
     pub trait WeatherResponse {
-        fn weather(&self, date: String) -> super::Weather;
+        fn weather(&self, date: String) -> crate::fmltest2::cleric::core::Weather;
     }
 
     #[imported]
