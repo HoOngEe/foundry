@@ -113,8 +113,8 @@ pub fn generate_dispatch(exported_handles: &[&syn::ItemTrait]) -> Result<TokenSt
             );
             let the_arm = syn::parse_str::<syn::Arm>(&code).unwrap();
             the_match.arms.push(the_arm);
-            the_match.arms.push(syn::parse_str("_ => panic!()").unwrap());
         }
+        the_match.arms.push(syn::parse_str("_ => panic!()").unwrap());
         syn::Expr::Match(the_match)
     } else {
         syn::parse_str("panic!(\"Dispatch has been invoked for a non-exporting module\")").unwrap()
