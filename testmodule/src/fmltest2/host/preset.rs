@@ -26,7 +26,7 @@ impl HandlePreset for Preset {
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
-        let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
+        let kind = get_context().ports.read().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
         match (kind.as_str(), handle.port_id) {
             ("human", 1) => {
                 let weather_request = &mut get_context().custom.weather.lock().unwrap();

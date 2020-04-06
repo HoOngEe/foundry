@@ -22,7 +22,7 @@ pub struct Preset {}
 
 impl HandlePreset for Preset {
     fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
-        let port_table = get_context().ports.lock().unwrap();
+        let port_table = get_context().ports.read().unwrap();
         let (config, port) = port_table.get(&port_id).unwrap();
         match (config.kind.as_str(), port_id) {
             ("cleric", 1) => {
@@ -50,7 +50,7 @@ impl HandlePreset for Preset {
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
-        let kind = get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
+        let kind = get_context().ports.read().unwrap().get(&handle.port_id).unwrap().0.kind.clone();
         match (kind.as_str(), handle.port_id) {
             ("cleric", 10) => {
                 let talk_to_clerics = &mut get_context().custom.talk_to_clerics.write().unwrap();

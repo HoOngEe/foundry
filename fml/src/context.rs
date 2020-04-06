@@ -19,7 +19,7 @@ use crate::port::Port;
 use crate::port::PortId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
@@ -45,7 +45,7 @@ pub type PortTable<D> = HashMap<PortId, (Config, Port<D>)>;
 /// A global context that will be accessible from this module
 pub struct Context<T: Custom, D: Dispatcher> {
     /// PortId to (Counterparty's Module Configuration, Actual Port)
-    pub ports: Arc<Mutex<PortTable<D>>>,
+    pub ports: Arc<RwLock<PortTable<D>>>,
 
     /// Meta, pre-decided constant variables
     pub config: Config,
@@ -55,7 +55,7 @@ pub struct Context<T: Custom, D: Dispatcher> {
 }
 
 impl<T: Custom, D: Dispatcher> Context<T, D> {
-    pub fn new(ports: Arc<Mutex<PortTable<D>>>, config: Config, custom: T) -> Self {
+    pub fn new(ports: Arc<RwLock<PortTable<D>>>, config: Config, custom: T) -> Self {
         Context {
             ports,
             config,

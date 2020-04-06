@@ -106,7 +106,7 @@ pub fn generate_export(exported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
             use std::sync::Arc;
 
             pub fn get_handle_pool(port_id: PortId) -> Arc<ExportedHandles> {
-                get_context().ports.lock().unwrap().get(&port_id).unwrap().1.dispatcher_get()
+                get_context().ports.read().unwrap().get(&port_id).unwrap().1.dispatcher_get()
             }
             #the_handles
             #the_exported_handles
