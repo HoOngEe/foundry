@@ -21,7 +21,7 @@ use crate::port::Port;
 use cbsb::execution::executee;
 use cbsb::ipc::{domain_socket, same_process, InterProcessUnit, Ipc};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 pub fn recv<I: Ipc, T: serde::de::DeserializeOwned>(ctx: &executee::Context<I>) -> T {
     serde_cbor::from_slice(&ctx.ipc.as_ref().unwrap().recv(None).unwrap()).unwrap()
@@ -56,7 +56,7 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
 
     let config = recv(&ctx);
     let custom = C::new(&config);
-    let ports: Arc<Mutex<PortTable<D>>> = Arc::new(Mutex::new(HashMap::new()));
+    let ports: Arc<RwLock<PortTable<D>>> = Arc::new(RwLock::new(HashMap::new()));
     let global_context = Context::new(ports.clone(), config, custom);
     context_setter(global_context);
 
@@ -65,10 +65,10 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
         if message == "link" {
             let (port_id, port_config, ipc_type, ipc_config) = recv(&ctx);
             let dispather = Arc::new(D::new(port_id, 128));
-            ports.lock().unwrap().insert(port_id, (port_config, create_port(ipc_type, ipc_config, dispather)));
+            ports.write().unwrap().insert(port_id, (port_config, create_port(ipc_type, ipc_config, dispather)));
         } else if message == "unlink" {
             let (port_id,) = recv(&ctx);
-            ports.lock().unwrap().remove(&port_id).unwrap();
+            ports.write().unwrap().remove(&port_id).unwrap();
         } else if message == "terminate" {
             break
         } else if message == "handle_export" {
@@ -84,7 +84,7 @@ pub fn core<I: Ipc, C: Custom, D: Dispatcher + 'static, H: HandlePreset>(
             let (handle, method, mut data): (ImportedHandle, u32, Vec<u8>) = recv(&ctx);
             let mut packet = vec![0 as u8; std::mem::size_of::<PacketHeader>()];
             packet.append(&mut data);
-            let port_table = ports.lock().unwrap();
+            let port_table = ports.read().unwrap();
             let result = port_table.get(&handle.port_id).unwrap().1.call(handle.id, method, packet);
             send(&ctx, &&result[std::mem::size_of::<PacketHeader>()..]);
         } else {

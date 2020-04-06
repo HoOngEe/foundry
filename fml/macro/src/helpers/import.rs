@@ -123,7 +123,7 @@ pub fn generate_import(imported_handles: &[&syn::ItemTrait]) -> Result<TokenStre
                     c
                 }, &args).unwrap();
                 let result =
-                    get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().1.call(handle.id, method, buffer);
+                    get_context().ports.read().unwrap().get(&handle.port_id).unwrap().1.call(handle.id, method, buffer);
                 serde_cbor::from_reader(&result[std::mem::size_of::<PacketHeader>()..]).unwrap()
             }
 

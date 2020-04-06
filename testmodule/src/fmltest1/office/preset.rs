@@ -22,7 +22,7 @@ pub struct Preset {}
 
 impl HandlePreset for Preset {
     fn export(&mut self, port_id: PortId) -> Result<ExportedHandle, String> {
-        let port_table = get_context().ports.lock().unwrap();
+        let port_table = get_context().ports.read().unwrap();
         let (config, port) = port_table.get(&port_id).unwrap();
         if config.kind == "person" {
             let bank = port.dispatcher_get().create_handle_bank(impls::JustBank {
@@ -34,7 +34,7 @@ impl HandlePreset for Preset {
     }
 
     fn import(&mut self, handle: ImportedHandle) -> Result<(), String> {
-        if get_context().ports.lock().unwrap().get(&handle.port_id).unwrap().0.kind != "person" {
+        if get_context().ports.read().unwrap().get(&handle.port_id).unwrap().0.kind != "person" {
             panic!("Invalid handle import")
         }
         let customer = &mut get_context().custom.customer.lock().unwrap();
